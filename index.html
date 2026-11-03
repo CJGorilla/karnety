@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="ikona-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Karnety">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#fbe4ef">
+<title>Karnety</title>
+<!-- Karnety – cyfrowe karnety na zajęcia fitness (dla trenerki). Jeden telefon, bez kont i bez serwera:
+     dane w pamięci telefonu (localStorage), kopia zapasowa w pliku .json, aktualizacja dla klientki przez WhatsApp (wa.me).
+     Instalacja: adres www → Safari → Udostępnij → „Do ekranu początkowego”. Działa bez internetu (sw.js). -->
+<style>
+:root{--bg:#fbe4ef;--bg2:#f7d3e4;--win:#fffafc;--ink:#3d2a3c;--mute:#8a6f86;--line:#5b3a5a;--lav:#b7a9f4;--lav2:#ded6fb;--pink:#f59cc3;--pink2:#fcd6e6;--yel:#fbe58c;--plum:#8c3b63;--ok:#57b884;--bad:#e0566f;
+  --xxs:#b7a9f4;--bal:#f59cc3;--r:14px;--sh:3px 3px 0 var(--line);--font:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 20% 0%,#fff3f8 0,transparent 45%),radial-gradient(circle at 100% 60%,#f9d9ea 0,transparent 40%),var(--bg);color:var(--ink);font:16px/1.4 var(--font);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+.wrap{max-width:560px;margin:0 auto;padding:calc(10px + env(safe-area-inset-top)) 12px calc(110px + env(safe-area-inset-bottom))}
+/* okno w stylu retro – cienka ramka, mały twardy cień */
+.win{background:var(--win);border:2px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:12px}
+.bar{display:flex;align-items:center;gap:8px;padding:6px 8px 6px 12px;background:var(--lav);border-bottom:2px solid var(--line);min-height:34px}
+.bar.pink{background:var(--pink)}.bar.plum{background:var(--plum);color:#fff}.bar.yel{background:var(--yel)}
+.bar h1,.bar h2,.bar h3{margin:0;font-size:15px;font-weight:800;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dots{display:flex;gap:4px;flex:none}
+.dots i{width:14px;height:14px;border:2px solid var(--line);border-radius:4px;background:var(--win)}
+.bar.plum .dots i{border-color:#fff;background:transparent}
+.ib{width:30px;height:26px;border:2px solid var(--line);border-radius:8px;background:var(--win);display:grid;place-items:center;font-size:14px;font-weight:800;flex:none}
+.ib:active{transform:translate(1px,1px)}
+.body{padding:12px}
+.btn{border:2px solid var(--line);border-radius:12px;padding:9px 14px;font-weight:800;font-size:15px;background:var(--win);box-shadow:2px 2px 0 var(--line);transition:transform .08s,box-shadow .08s}
+.btn:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--line)}
+.btn.lav{background:var(--lav)}.btn.pink{background:var(--pink)}.btn.yel{background:var(--yel)}.btn.ok{background:#bde9cf}.btn.red{background:#fbd0d7;color:#8c1f33}
+.btn.wide{width:100%}
+.btn[disabled]{opacity:.45;pointer-events:none}
+/* nagłówek */
+.top{display:flex;align-items:center;gap:8px}
+.sub{font-size:13px;color:var(--mute);margin:4px 2px 12px}
+/* klientka */
+.kl .bar{background:var(--pink2)}
+.kl .bar h3{font-size:16px}
+.badge{font-size:12px;font-weight:800;border:2px solid var(--line);border-radius:99px;padding:1px 8px;background:var(--win);white-space:nowrap}
+.badge.warn{background:var(--yel)}.badge.bad{background:#fbd0d7}.badge.end{background:#e8e2ea}
+.sq{display:flex;flex-wrap:wrap;gap:6px}
+.s{width:34px;height:34px;border:2px solid var(--line);border-radius:9px;background:var(--win);display:grid;place-items:center;font-size:12px;font-weight:900;color:var(--line);transition:transform .12s}
+.s.x{background:var(--xxs)}.s.b{background:var(--bal)}
+.s.next{background:#fff;border-style:dashed;animation:puls 1.6s ease-in-out infinite}
+.s.next::after{content:"+";font-size:18px;color:var(--plum)}
+.s.free{opacity:.45}
+.s:active{transform:scale(.9)}
+@keyframes puls{50%{box-shadow:0 0 0 4px rgba(245,156,195,.45)}}
+.meta{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--mute);margin-top:9px}
+.akc{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.akc .btn{padding:7px 11px;font-size:14px}
+.wa{background:#c9f1d6}
+.leg{display:flex;gap:12px;font-size:12.5px;color:var(--mute);margin:0 2px 10px;flex-wrap:wrap}
+.leg i{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-radius:4px;vertical-align:-2px;margin-right:4px}
+.pusto{text-align:center;color:var(--mute);padding:26px 14px}
+.pusto b{display:block;font-size:18px;color:var(--ink);margin-bottom:6px}
+/* przycisk + */
+.fab{position:fixed;right:calc(16px + env(safe-area-inset-right));bottom:calc(18px + env(safe-area-inset-bottom));width:58px;height:58px;border:2px solid var(--line);border-radius:18px;background:var(--yel);box-shadow:3px 3px 0 var(--line);font-size:32px;font-weight:700;line-height:1;z-index:10}
+.fab:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--line)}
+/* menu */
+.menu{position:fixed;inset:0;z-index:30;background:rgba(61,42,60,.25);display:none}
+.menu.on{display:block}
+.menu .win{position:absolute;top:calc(10px + env(safe-area-inset-top));left:12px;width:min(300px,calc(100vw - 24px));animation:spad .22s ease-out}
+@keyframes spad{from{opacity:0;transform:translateY(-8px)}}
+.menu .body{display:grid;gap:8px}
+.menu .btn{text-align:left}
+.menu .btn.on{background:var(--lav2)}
+/* okna dialogowe */
+.dlg{position:fixed;inset:0;z-index:40;background:rgba(61,42,60,.35);display:none;align-items:flex-end;justify-content:center;padding:12px 12px calc(12px + env(safe-area-inset-bottom))}
+.dlg.on{display:flex}
+.dlg .win{width:min(520px,100%);max-height:88vh;overflow:auto;margin:0;animation:wjazd .25s cubic-bezier(.2,.8,.2,1)}
+@keyframes wjazd{from{transform:translateY(30px);opacity:0}}
+.pole{margin-bottom:12px}
+.pole label,.lab{display:block;font-size:13px;font-weight:800;margin:0 2px 5px}
+.pole input[type=text],.pole input[type=tel],.pole input[type=date],.pole input[type=number],.pole textarea{width:100%;border:2px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;font-size:16px;outline:0}
+.pole input:focus{background:#fffbe6}
+.rzad{display:flex;gap:10px}.rzad>*{flex:1;min-width:0}
+.hint{font-size:12.5px;color:var(--mute);margin:4px 2px 0}
+/* kółko wyboru 1–12 (jak budzik w iOS) */
+.koło{position:relative;height:150px;border:2px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
+.koło .okienko{position:absolute;left:8px;right:8px;top:55px;height:40px;border-radius:10px;background:var(--lav2);border:2px solid var(--line);pointer-events:none}
+.koło ul{position:relative;list-style:none;margin:0;padding:55px 0;height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.koło ul::-webkit-scrollbar{display:none}
+.koło li{height:40px;display:grid;place-items:center;scroll-snap-align:center;font-size:22px;font-weight:800;color:var(--mute);transition:color .15s,transform .15s}
+.koło li.on{color:var(--ink);transform:scale(1.15)}
+.koło::before,.koło::after{content:"";position:absolute;left:0;right:0;height:50px;z-index:1;pointer-events:none}
+.koło::before{top:0;background:linear-gradient(#fff,rgba(255,255,255,0))}.koło::after{bottom:0;background:linear-gradient(rgba(255,255,255,0),#fff)}
+/* wybór sali */
+.sale{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:4px 0 14px}
+.sala{border:2px solid var(--line);border-radius:14px;padding:16px 8px;font-size:20px;font-weight:900;background:var(--win);box-shadow:2px 2px 0 var(--line)}
+.sala.on.x{background:var(--xxs)}.sala.on.b{background:var(--bal)}
+.sala.on{transform:translate(2px,2px);box-shadow:0 0 0 var(--line)}
+/* archiwum */
+.seg{display:flex;border:2px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:12px;background:var(--win)}
+.seg button{flex:1;padding:8px 6px;font-weight:800;font-size:14px}
+.seg button+button{border-left:2px solid var(--line)}
+.seg button.on{background:var(--lav)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:7px 6px;border-bottom:1px dashed #d8c3d4;vertical-align:top}
+th{font-size:12px;color:var(--mute);font-weight:800}
+td.r,th.r{text-align:right}
+.tag{display:inline-block;font-size:11.5px;font-weight:900;border:2px solid var(--line);border-radius:7px;padding:0 6px}
+.tag.x{background:var(--xxs)}.tag.b{background:var(--bal)}
+details.mc{border-top:2px dashed #d8c3d4;padding-top:8px;margin-top:8px}
+details.mc summary{font-weight:800;cursor:pointer;padding:4px 0}
+.dzien{font-weight:800;font-size:14px;margin:10px 0 2px}
+.sum{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px}
+.sum div{border:2px solid var(--line);border-radius:12px;padding:8px 10px;background:var(--win)}
+.sum b{display:block;font-size:20px}.sum span{font-size:12px;color:var(--mute)}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;font-weight:700;opacity:0;transition:opacity .25s;pointer-events:none;z-index:60;max-width:calc(100vw - 32px);text-align:center}
+.toast.on{opacity:1}
+.toast .btn{margin-left:8px;padding:3px 10px;font-size:13px;box-shadow:none;pointer-events:auto}
+.widok{display:none}.widok.on{display:block}
+#druk{display:none}
+@media print{body{background:#fff}.wrap,.fab,.menu,.dlg,.toast{display:none!important}#druk{display:block;font:12px/1.35 -apple-system,"Segoe UI",Arial,sans-serif;color:#000}
+  #druk h1{font-size:18px;margin:0 0 4px}#druk h2{font-size:14px;margin:14px 0 4px}#druk table{font-size:11px}#druk th,#druk td{border-bottom:1px solid #ccc;padding:3px 4px}#druk .sum div{border:1px solid #999}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="win"><div class="bar plum"><button class="ib" id="hamb" aria-label="Menu" style="background:transparent;border-color:#fff;color:#fff">☰</button><h1 id="tytul">Lista obecności</h1><div class="dots" aria-hidden="true"><i></i><i></i><i></i></div></div>
+    <div class="body" style="padding:8px 12px"><div class="sub" id="podtytul" style="margin:0"></div></div></div>
+  <div id="alerty"></div>
+
+  <section class="widok on" id="w-lista">
+    <div class="leg"><span><i style="background:var(--xxs)"></i>XXS</span><span><i style="background:var(--bal)"></i>BALANCE</span><span><i style="border-style:dashed"></i>następne wejście – kliknij</span></div>
+    <div id="lista"></div>
+  </section>
+
+  <section class="widok" id="w-arch">
+    <div class="win"><div class="bar"><h2>Wszystkie wejścia</h2><div class="dots" aria-hidden="true"><i></i><i></i><i></i></div></div><div class="body">
+      <div class="seg" id="archSeg"><button data-v="kl" class="on">Według klientek</button><button data-v="dni">Według dni</button></div>
+      <div id="arch"></div></div></div>
+  </section>
+
+  <section class="widok" id="w-eksp">
+    <div class="win"><div class="bar yel"><h2>Okres i podsumowanie</h2><div class="dots" aria-hidden="true"><i></i><i></i><i></i></div></div><div class="body">
+      <div class="rzad"><div class="pole"><label for="eOd">Od</label><input type="date" id="eOd"></div><div class="pole"><label for="eDo">Do</label><input type="date" id="eDo"></div></div>
+      <div class="akc" style="margin:0 0 12px"><button class="btn" data-zakres="mies">Ten miesiąc</button><button class="btn" data-zakres="pop">Poprzedni miesiąc</button><button class="btn" data-zakres="rok">Ten rok</button></div>
+      <div id="podsum"></div>
+      <div class="akc"><button class="btn lav" id="eXlsx">⬇ Excel (.xlsx)</button><button class="btn pink" id="ePdf">⬇ PDF</button></div>
+      <p class="hint">Excel: arkusze „Podsumowanie”, „Według dni”, „Według klientek”. PDF: otworzy się okno drukowania – wybierz „Zapisz jako PDF” (na iPhonie: Udostępnij → Zapisz w Plikach).</p>
+    </div></div>
+  </section>
+
+  <section class="widok" id="w-ust">
+    <div class="win"><div class="bar"><h2>Ustawienia</h2><div class="dots" aria-hidden="true"><i></i><i></i><i></i></div></div><div class="body">
+      <div class="rzad"><div class="pole"><label for="uBal">Sala BALANCE – zł za godzinę</label><input type="number" id="uBal" min="0" step="1" inputmode="decimal"></div>
+        <div class="pole"><label for="uXxs">Sala XXS – zł za godzinę</label><input type="number" id="uXxs" min="0" step="1" inputmode="decimal"></div></div>
+      <div class="rzad"><div class="pole"><label for="uCzas">Jedno wejście = godzin</label><input type="number" id="uCzas" min="0.25" step="0.25" inputmode="decimal"></div>
+        <div class="pole"><label for="uKier">Numer kierunkowy</label><input type="tel" id="uKier" placeholder="48"></div></div>
+      <div class="pole"><span class="lab">Opłata za salę liczona</span><div class="seg" id="uOpl" style="margin:0"><button data-v="zajecia">od zajęć</button><button data-v="wejscie">od każdej klientki</button></div><p class="hint">„Od zajęć”: dzień na danej sali = jedne zajęcia (5 klientek na BALANCE tego samego dnia = 1 h sali = 40 zł). „Od każdej klientki”: każde wejście to osobna godzina sali.</p></div>
+      <div class="pole"><label for="uMsg">Początek wiadomości WhatsApp</label><input type="text" id="uMsg"></div>
+      <p class="hint">Ważność karnetu: tyle tygodni, ile wejść (4 wejścia = 4 tygodnie, 8 wejść = 8 tygodni).</p>
+    </div></div>
+    <div class="win"><div class="bar pink"><h2>💾 Kopia zapasowa</h2><div class="dots" aria-hidden="true"><i></i><i></i><i></i></div></div><div class="body">
+      <p class="sub" style="margin-top:0" id="kopiaInfo"></p>
+      <div class="akc" style="margin-top:0"><button class="btn yel" id="kZap">⬇ Zapisz kopię</button><button class="btn" id="kWcz">⬆ Wczytaj kopię</button><input type="file" id="kPlik" accept=".json,application/json" hidden></div>
+      <p class="hint">Wszystko zapisuje się samo w telefonie. Kopię najlepiej wysłać sobie mailem albo zapisać w iCloud (Pliki). Wczytanie kopii zastępuje obecne dane.</p>
+    </div></div>
+  </section>
+</div>
+
+<button class="fab" id="fab" aria-label="Dodaj klientkę">+</button>
+
+<!-- menu (hamburger) -->
+<div class="menu" id="menu"><div class="win"><div class="bar plum"><h3>Menu</h3><button class="ib" id="menuX" aria-label="Zamknij" style="background:transparent;border-color:#fff;color:#fff">✕</button></div>
+  <div class="body"><button class="btn on" data-w="lista">📋 Lista obecności</button><button class="btn" data-w="arch">🗂 Archiwum</button><button class="btn" data-w="eksp">📊 Eksport i rozliczenie</button><button class="btn" data-w="ust">⚙ Ustawienia i kopia</button></div></div></div>
+
+<!-- dodaj / edytuj klientkę -->
+<div class="dlg" id="dKl"><div class="win" role="dialog" aria-modal="true" aria-labelledby="dKlT"><div class="bar"><h3 id="dKlT">Nowa klientka</h3><button class="ib" data-zamknij aria-label="Zamknij">✕</button></div><div class="body">
+  <div class="pole"><label for="kImie">Imię i nazwisko</label><input type="text" id="kImie" autocomplete="off" placeholder="np. Anna Nowak"></div>
+  <div class="pole"><label for="kTel">Telefon (WhatsApp)</label><input type="tel" id="kTel" placeholder="np. 600 123 456" inputmode="tel"></div>
+  <div id="kKarnet">
+    <div class="rzad">
+      <div class="pole"><span class="lab">Ilość wejść</span><div class="koło" id="kolo"><div class="okienko"></div><ul id="koloUl"></ul></div></div>
+      <div class="pole"><label for="kData">Data zakupu</label><input type="date" id="kData"><p class="hint" id="kWazny"></p>
+        <label for="kCena" style="margin-top:10px">Cena karnetu (zł)</label><input type="number" id="kCena" min="0" step="1" inputmode="decimal" placeholder="można pominąć"></div>
+    </div>
+  </div>
+  <div id="kHist"></div>
+  <button class="btn yel wide" id="kOk" style="margin-top:6px">✓ Zatwierdź</button>
+  <button class="btn red wide" id="kUsun" style="margin-top:10px">Usuń klientkę</button>
+</div></div></div>
+
+<!-- wejście: wybór sali -->
+<div class="dlg" id="dWe"><div class="win" role="dialog" aria-modal="true" aria-labelledby="dWeT"><div class="bar pink"><h3 id="dWeT">Wejście</h3><button class="ib" data-zamknij aria-label="Zamknij">✕</button></div><div class="body">
+  <p style="margin:0 0 6px;font-weight:800" id="dWeKto"></p>
+  <span class="lab">Gdzie były zajęcia?</span>
+  <div class="sale"><button class="sala x" data-sala="XXS">XXS</button><button class="sala b" data-sala="BALANCE">BALANCE</button></div>
+  <div class="pole"><label for="weData">Data zajęć</label><input type="date" id="weData"></div>
+  <button class="btn yel wide" id="weOk" disabled>Wybierz salę</button>
+</div></div></div>
+
+<!-- cofnięcie wejścia -->
+<div class="dlg" id="dCof"><div class="win" role="dialog" aria-modal="true" aria-labelledby="dCofT"><div class="bar plum"><h3 id="dCofT">Cofnąć wejście?</h3><button class="ib" data-zamknij aria-label="Zamknij" style="background:transparent;border-color:#fff;color:#fff">✕</button></div><div class="body">
+  <p id="dCofTxt" style="margin:0 0 12px"></p>
+  <div class="rzad"><button class="btn" data-zamknij>Zostaw</button><button class="btn red" id="cofOk">Cofnij wejście</button></div>
+</div></div></div>
+
+<div id="druk"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+const KEY='karnety-v1',KEY_KOPIA='karnety-ostatnia-kopia';
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const zIso=s=>{const [y,m,d]=s.slice(0,10).split('-').map(Number);return new Date(y,m-1,d)};
+const dzis=()=>{const d=new Date();d.setHours(0,0,0,0);return d};
+const MIES=['styczeń','luty','marzec','kwiecień','maj','czerwiec','lipiec','sierpień','wrzesień','październik','listopad','grudzień'];
+const DN=['nd','pn','wt','śr','cz','pt','sb'];
+const pl=s=>{const d=zIso(s);return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear()};
+const kr=s=>{const d=zIso(s);return DN[d.getDay()]+' '+String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')};
+const zl=n=>(Math.round(n*100)/100).toLocaleString('pl-PL',{minimumFractionDigits:n%1?2:0,maximumFractionDigits:2})+' zł';
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const wejsciaSlowo=n=>n===1?'wejście':(n%10>=2&&n%10<=4&&(n%100<10||n%100>=20))?'wejścia':'wejść';
+const dniSlowo=n=>Math.abs(n)===1?'dzień':'dni';
+
+/* ── dane ── */
+let D={wersja:1,klientki:[],ust:{bal:40,xxs:0,czas:1,kier:'48',oplata:'zajecia',msg:'Hej, przesyłam aktualizację twojego karnetu 🙂'}},blad=false;
+try{const t=localStorage.getItem(KEY);if(t){const x=JSON.parse(t);if(x&&Array.isArray(x.klientki)){D=x;D.ust=Object.assign({bal:40,xxs:0,czas:1,kier:'48',oplata:'zajecia',msg:'Hej, przesyłam aktualizację twojego karnetu 🙂'},x.ust||{})}}}catch(e){blad=true}
+function zapisz(){try{localStorage.setItem(KEY,JSON.stringify(D));return true}catch(e){blad=true;toast('⚠ Nie udało się zapisać – zrób kopię zapasową');return false}}
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+const kl=id=>D.klientki.find(k=>k.id===id);
+const karnet=k=>k.karnety[k.karnety.length-1];
+const waznyDo=c=>{const d=zIso(c.zakup);d.setDate(d.getDate()+c.wejscia*7);return d};  // N wejść = N tygodni
+const dniDo=c=>Math.round((waznyDo(c)-dzis())/864e5);
+const wszystkie=()=>{const o=[];D.klientki.forEach(k=>k.karnety.forEach(c=>c.uzycia.forEach(u=>o.push({k,c,u}))));return o};
+
+/* ── widoki ── */
+let widok='lista';
+function pokaz(w){widok=w;$$('.widok').forEach(x=>x.classList.toggle('on',x.id==='w-'+w));$$('#menu [data-w]').forEach(b=>b.classList.toggle('on',b.dataset.w===w));
+  $('#tytul').textContent={lista:'Lista obecności',arch:'Archiwum',eksp:'Eksport i rozliczenie',ust:'Ustawienia'}[w];$('#fab').style.display=w==='lista'?'':'none';$('#menu').classList.remove('on');rysuj();window.scrollTo(0,0)}
+$('#hamb').onclick=()=>$('#menu').classList.add('on');$('#menuX').onclick=()=>$('#menu').classList.remove('on');
+$('#menu').onclick=e=>{if(e.target.id==='menu')$('#menu').classList.remove('on');const b=e.target.closest('[data-w]');if(b)pokaz(b.dataset.w)};
+
+function rysuj(){
+  const n=D.klientki.length,dz=dzis();
+  $('#podtytul').textContent=String(dz.getDate()).padStart(2,'0')+'.'+String(dz.getMonth()+1).padStart(2,'0')+'.'+dz.getFullYear()+' · '+n+' '+(n===1?'klientka':n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?'klientki':'klientek');
+  const ost=+(localStorage.getItem(KEY_KOPIA)||0),dk=ost?Math.floor((Date.now()-ost)/864e5):null;
+  $('#alerty').innerHTML=(n&&(dk===null||dk>=7))?'<div class="win"><div class="body" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:#fff6cf"><span style="font-size:14px">💾 '+(dk===null?'Nie ma jeszcze kopii zapasowej.':'Ostatnia kopia: '+dk+' dni temu.')+'</span><button class="btn yel" id="szybkaKopia">Zapisz kopię</button></div></div>':'';
+  if($('#szybkaKopia'))$('#szybkaKopia').onclick=zapiszKopie;
+  if(widok==='lista')rysujListe();else if(widok==='arch')rysujArch();else if(widok==='eksp')rysujEksp();else rysujUst();
+}
+function rysujListe(){
+  const L=[...D.klientki].sort((a,b)=>a.imie.localeCompare(b.imie,'pl'));
+  if(!L.length){$('#lista').innerHTML='<div class="win"><div class="body pusto"><b>Brak klientek</b>Kliknij <b style="display:inline">＋</b> w prawym dolnym rogu, żeby dodać pierwszą.</div></div>';return}
+  $('#lista').innerHTML=L.map(k=>{const c=karnet(k),u=c.uzycia.length,zost=c.wejscia-u,dd=dniDo(c),koniec=zost<=0||dd<0;
+    const bd=zost<=0?['end','wykorzystany']:dd<0?['bad','po terminie '+(-dd)+' '+dniSlowo(dd)]:dd<=7?['warn',dd+' '+dniSlowo(dd)+' do końca']:['',dd+' '+dniSlowo(dd)+' do końca'];
+    const sq=[...Array(c.wejscia)].map((_,i)=>{if(i<u){const x=c.uzycia[i];return '<button class="s '+(x.sala==='XXS'?'x':'b')+'" data-cof="'+k.id+'" data-i="'+i+'" aria-label="Wejście '+(i+1)+': '+x.sala+' '+pl(x.data)+'" title="'+x.sala+' · '+pl(x.data)+'">'+(x.sala==='XXS'?'X':'B')+'</button>'}
+      if(i===u&&dd>=0)return '<button class="s next" data-we="'+k.id+'" aria-label="Zaznacz wejście '+(i+1)+'"></button>';
+      return '<span class="s free" aria-hidden="true"></span>'}).join('');
+    return '<div class="win kl"><div class="bar"><h3>'+esc(k.imie)+'</h3><span class="badge '+bd[0]+'">'+bd[1]+'</span></div><div class="body">'+
+      '<div class="sq">'+sq+'</div>'+
+      '<div class="meta"><span>zostało <b>'+Math.max(0,zost)+'</b> z '+c.wejscia+'</span><span>karnet od '+pl(c.zakup)+' do '+pl(iso(waznyDo(c)))+'</span></div>'+
+      '<div class="akc">'+(koniec?'<button class="btn yel" data-nowy="'+k.id+'">＋ Nowy karnet</button>':'')+(k.tel?'<button class="btn wa" data-wa="'+k.id+'">💬 WhatsApp</button>':'')+'<button class="btn" data-ed="'+k.id+'">✎ Edytuj</button></div></div></div>'}).join('');
+}
+
+/* ── wejście: kwadracik → sala → zatwierdź ── */
+let we=null,sala=null;
+function otworz(id){$('#'+id).classList.add('on')}
+function zamknij(id){$('#'+id).classList.remove('on')}
+$$('[data-zamknij]').forEach(b=>b.onclick=()=>b.closest('.dlg').classList.remove('on'));
+$$('.dlg').forEach(d=>d.addEventListener('click',e=>{if(e.target===d)d.classList.remove('on')}));
+$('#lista').addEventListener('click',e=>{
+  const t=e.target.closest('button');if(!t)return;
+  if(t.dataset.we){we=t.dataset.we;sala=null;const k=kl(we),c=karnet(k);$('#dWeKto').textContent=k.imie+' · wejście '+(c.uzycia.length+1)+' z '+c.wejscia;
+    $$('.sala').forEach(s=>s.classList.remove('on'));$('#weData').value=iso(new Date());$('#weOk').disabled=true;$('#weOk').textContent='Wybierz salę';otworz('dWe')}
+  else if(t.dataset.cof){const k=kl(t.dataset.cof),c=karnet(k),i=+t.dataset.i;
+    if(i!==c.uzycia.length-1){toast('Cofnąć można tylko ostatnie wejście');return}
+    const x=c.uzycia[i];$('#dCofTxt').innerHTML='<b>'+esc(k.imie)+'</b><br>wejście '+(i+1)+': '+x.sala+', '+pl(x.data);$('#cofOk').onclick=()=>{c.uzycia.pop();zapisz();zamknij('dCof');rysuj();toast('Wejście cofnięte')};otworz('dCof')}
+  else if(t.dataset.ed)edytuj(t.dataset.ed);
+  else if(t.dataset.nowy)nowyKarnet(t.dataset.nowy);
+  else if(t.dataset.wa)whatsapp(t.dataset.wa);
+});
+$$('.sala').forEach(s=>s.onclick=()=>{sala=s.dataset.sala;$$('.sala').forEach(x=>x.classList.toggle('on',x===s));$('#weOk').disabled=false;$('#weOk').textContent='✓ Zatwierdź wejście – '+sala});
+$('#weOk').onclick=()=>{if(!we||!sala)return;const k=kl(we),c=karnet(k),d=$('#weData').value||iso(new Date());
+  c.uzycia.push({data:d,sala,zapisano:new Date().toISOString()});if(zapisz()){zamknij('dWe');rysuj();const z=c.wejscia-c.uzycia.length;toast('✓ '+k.imie.split(' ')[0]+' – '+sala+' · zostało '+z)}};
+
+/* ── kółko 1–12 ── */
+const ul=$('#koloUl');ul.innerHTML=[...Array(12)].map((_,i)=>'<li data-v="'+(i+1)+'">'+(i+1)+'</li>').join('');
+let wybrane=8,koloT=null;
+function koloUstaw(v,gladko){wybrane=v;ul.scrollTo({top:(v-1)*40,behavior:gladko?'smooth':'auto'});koloZaznacz()}
+function koloZaznacz(){$$('#koloUl li').forEach(li=>li.classList.toggle('on',+li.dataset.v===wybrane));waznoscInfo()}
+ul.addEventListener('scroll',()=>{const v=Math.min(12,Math.max(1,Math.round(ul.scrollTop/40)+1));if(v!==wybrane){wybrane=v;koloZaznacz()}clearTimeout(koloT);koloT=setTimeout(()=>ul.scrollTo({top:(wybrane-1)*40,behavior:'smooth'}),140)},{passive:true});
+ul.addEventListener('click',e=>{const li=e.target.closest('li');if(li)koloUstaw(+li.dataset.v,true)});
+function waznoscInfo(){const d=$('#kData').value;if(!d){$('#kWazny').textContent='';return}const x=zIso(d);x.setDate(x.getDate()+wybrane*7);$('#kWazny').textContent='ważny '+wybrane+' tyg. – do '+pl(iso(x))}
+$('#kData').oninput=waznoscInfo;
+
+/* ── klientka: dodaj / edytuj / nowy karnet ── */
+let edId=null,tryb='nowa';
+function formularz(t,id){
+  tryb=t;edId=id||null;const k=id?kl(id):null,c=k?karnet(k):null;
+  $('#dKlT').textContent=t==='nowa'?'Nowa klientka':t==='karnet'?'Nowy karnet':'Edytuj klientkę';
+  $('#kImie').value=k?k.imie:'';$('#kTel').value=k?k.tel||'':'';
+  $('#kImie').parentNode.style.display=$('#kTel').parentNode.style.display=t==='karnet'?'none':'';
+  $('#kData').value=t==='edycja'?c.zakup:iso(new Date());$('#kCena').value=t==='edycja'&&c.cena!=null?c.cena:(t==='karnet'&&c&&c.cena!=null?c.cena:'');
+  otworz('dKl');requestAnimationFrame(()=>koloUstaw(t==='edycja'?c.wejscia:(c?c.wejscia:8),false));
+  $('#kUsun').style.display=t==='edycja'?'':'none';
+  $('#kHist').innerHTML=t==='edycja'?historiaHTML(k):'';
+  $$('#kHist [data-usunwe]').forEach(b=>b.onclick=()=>{const [ci,ui]=b.dataset.usunwe.split(':').map(Number);const x=k.karnety[ci].uzycia[ui];if(!confirm('Usunąć wejście '+x.sala+' z '+pl(x.data)+'?'))return;k.karnety[ci].uzycia.splice(ui,1);zapisz();formularz('edycja',k.id);rysuj()});
+  if(t==='nowa')setTimeout(()=>$('#kImie').focus(),250);
+}
+function historiaHTML(k){
+  const w=[];k.karnety.forEach((c,ci)=>c.uzycia.forEach((u,ui)=>w.push({c,ci,u,ui})));
+  return '<details class="mc"><summary>Historia wejść ('+w.length+') i karnety ('+k.karnety.length+')</summary><table><tr><th>Data</th><th>Sala</th><th>Karnet</th><th></th></tr>'+
+    w.reverse().map(x=>'<tr><td>'+pl(x.u.data)+'</td><td><span class="tag '+(x.u.sala==='XXS'?'x':'b')+'">'+x.u.sala+'</span></td><td>'+x.c.wejscia+' wej. od '+pl(x.c.zakup)+'</td><td class="r"><button class="ib" data-usunwe="'+x.ci+':'+x.ui+'" aria-label="Usuń wejście">✕</button></td></tr>').join('')+'</table>'+
+    '<p class="hint">Edycja poniżej zmienia <b>aktualny</b> karnet. Nowy karnet dodasz przyciskiem „＋ Nowy karnet” na liście.</p></details>';
+}
+const edytuj=id=>formularz('edycja',id),nowyKarnet=id=>formularz('karnet',id);
+$('#fab').onclick=()=>formularz('nowa');
+$('#kOk').onclick=()=>{
+  const imie=$('#kImie').value.trim().replace(/\s+/g,' '),tel=$('#kTel').value.trim(),data=$('#kData').value,cena=$('#kCena').value===''?null:Math.max(0,+$('#kCena').value);
+  if(tryb!=='karnet'&&!imie){toast('Wpisz imię i nazwisko');$('#kImie').focus();return}
+  if(!data){toast('Wybierz datę zakupu');return}
+  if(tryb==='nowa'){if(D.klientki.some(k=>k.imie.toLowerCase()===imie.toLowerCase())&&!confirm('Klientka „'+imie+'” już jest na liście. Dodać drugą o tym samym imieniu?'))return;
+    D.klientki.push({id:uid(),imie,tel,karnety:[{id:uid(),wejscia:wybrane,zakup:data,cena,uzycia:[]}]})}
+  else{const k=kl(edId);
+    if(tryb==='karnet')k.karnety.push({id:uid(),wejscia:wybrane,zakup:data,cena,uzycia:[]});
+    else{const c=karnet(k);if(wybrane<c.uzycia.length){toast('Ten karnet ma już '+c.uzycia.length+' wykorzystanych wejść');return}k.imie=imie;k.tel=tel;Object.assign(c,{wejscia:wybrane,zakup:data,cena})}}
+  if(zapisz()){zamknij('dKl');rysuj();toast(tryb==='nowa'?'✓ Dodana: '+imie:tryb==='karnet'?'✓ Nowy karnet: '+wybrane+' '+wejsciaSlowo(wybrane):'✓ Zapisane')}
+};
+$('#kUsun').onclick=()=>{const k=kl(edId);if(!confirm('Usunąć klientkę „'+k.imie+'” razem z całą historią wejść?\n\nTego nie da się cofnąć (chyba że z kopii zapasowej).'))return;D.klientki=D.klientki.filter(x=>x.id!==edId);zapisz();zamknij('dKl');rysuj();toast('Usunięta')};
+
+/* ── WhatsApp: gotowa wiadomość z obecnościami ── */
+function telWa(t){let n=String(t||'').replace(/[^\d+]/g,'');if(n.startsWith('+'))n=n.slice(1);else if(n.startsWith('00'))n=n.slice(2);else if(n.length<=9)n=String(D.ust.kier||'48').replace(/\D/g,'')+n;return n}
+function whatsapp(id){
+  const k=kl(id),c=karnet(k),dd=dniDo(c),zost=c.wejscia-c.uzycia.length;
+  const t=[D.ust.msg,'','Karnet: '+c.wejscia+' '+wejsciaSlowo(c.wejscia)+' (od '+pl(c.zakup)+', ważny do '+pl(iso(waznyDo(c)))+')',
+    'Wykorzystane ('+c.uzycia.length+'):'].concat(c.uzycia.length?c.uzycia.map((u,i)=>(i+1)+'. '+pl(u.data)+' – '+u.sala):['– jeszcze żadne']).concat(['',
+    'Zostało: '+Math.max(0,zost)+' '+wejsciaSlowo(Math.max(0,zost))+(dd>=0?' · '+dd+' '+dniSlowo(dd)+' do końca karnetu':' · karnet po terminie')]).join('\n');
+  const a=document.createElement('a');a.href='https://wa.me/'+telWa(k.tel)+'?text='+encodeURIComponent(t);a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();
+}
+
+/* ── archiwum ── */
+let archTryb='kl';
+$('#archSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;archTryb=b.dataset.v;$$('#archSeg button').forEach(x=>x.classList.toggle('on',x===b));rysujArch()};
+const mKey=s=>s.slice(0,7),mNazwa=k=>{const [y,m]=k.split('-').map(Number);return MIES[m-1]+' '+y};
+function rysujArch(){
+  const W=wszystkie();if(!W.length){$('#arch').innerHTML='<div class="pusto"><b>Archiwum jest puste</b>Tu pojawi się każde zaznaczone wejście.</div>';return}
+  const teraz=iso(new Date()).slice(0,7),mies=[...new Set(W.map(x=>mKey(x.u.data)).concat([teraz]))].sort().reverse();
+  const blok=m=>{const w=W.filter(x=>mKey(x.u.data)===m);if(!w.length)return '<p class="sub">Brak wejść w tym miesiącu.</p>';
+    const xs=w.filter(x=>x.u.sala==='XXS').length,bs=w.length-xs,h='<p class="sub" style="margin:2px 0 8px">'+w.length+' '+wejsciaSlowo(w.length)+' · XXS '+xs+' · BALANCE '+bs+'</p>';
+    if(archTryb==='dni'){const dni=[...new Set(w.map(x=>x.u.data))].sort().reverse();
+      return h+dni.map(d=>'<div class="dzien">'+kr(d)+'</div><table>'+w.filter(x=>x.u.data===d).sort((a,b)=>a.k.imie.localeCompare(b.k.imie,'pl')).map(x=>'<tr><td>'+esc(x.k.imie)+'</td><td class="r"><span class="tag '+(x.u.sala==='XXS'?'x':'b')+'">'+x.u.sala+'</span></td></tr>').join('')+'</table>').join('')}
+    const ks=[...new Set(w.map(x=>x.k))].sort((a,b)=>a.imie.localeCompare(b.imie,'pl'));
+    return h+ks.map(k=>{const kw=w.filter(x=>x.k===k).sort((a,b)=>a.u.data<b.u.data?-1:1);return '<div class="dzien">'+esc(k.imie)+' <span style="font-weight:600;color:var(--mute)">· '+kw.length+'</span></div><table>'+kw.map(x=>'<tr><td>'+kr(x.u.data)+'</td><td class="r"><span class="tag '+(x.u.sala==='XXS'?'x':'b')+'">'+x.u.sala+'</span></td></tr>').join('')+'</table>'}).join('')};
+  $('#arch').innerHTML='<div class="lab" style="font-size:15px">'+mNazwa(mies[0])+' (bieżący)</div>'+blok(mies[0])+mies.slice(1).map(m=>'<details class="mc"><summary>'+mNazwa(m)+'</summary>'+blok(m)+'</details>').join('');
+}
+
+/* ── eksport i rozliczenie ── */
+function zakres(t){const d=new Date();let od,do_;if(t==='mies'){od=new Date(d.getFullYear(),d.getMonth(),1);do_=new Date(d.getFullYear(),d.getMonth()+1,0)}
+  else if(t==='pop'){od=new Date(d.getFullYear(),d.getMonth()-1,1);do_=new Date(d.getFullYear(),d.getMonth(),0)}else{od=new Date(d.getFullYear(),0,1);do_=new Date(d.getFullYear(),11,31)}
+  $('#eOd').value=iso(od);$('#eDo').value=iso(do_);rysujEksp()}
+$$('[data-zakres]').forEach(b=>b.onclick=()=>zakres(b.dataset.zakres));$('#eOd').oninput=$('#eDo').oninput=()=>rysujEksp();
+function licz(){
+  const od=$('#eOd').value,do_=$('#eDo').value,U=D.ust;
+  const w=wszystkie().filter(x=>x.u.data>=od&&x.u.data<=do_).sort((a,b)=>a.u.data<b.u.data?-1:a.u.data>b.u.data?1:a.k.imie.localeCompare(b.k.imie,'pl'));
+  const wart=x=>x.c.cena!=null&&x.c.wejscia?x.c.cena/x.c.wejscia:0;
+  const xs=w.filter(x=>x.u.sala==='XXS'),bs=w.filter(x=>x.u.sala==='BALANCE');
+  const hX=xs.length*U.czas,hB=bs.length*U.czas;
+  const zajX=new Set(xs.map(x=>x.u.data)).size,zajB=new Set(bs.map(x=>x.u.data)).size;  // zajęcia = dzień na danej sali
+  const odZajec=U.oplata!=='wejscie',sX=(odZajec?zajX:xs.length)*U.czas,sB=(odZajec?zajB:bs.length)*U.czas,oplB=sB*U.bal,oplX=sX*U.xxs;
+  const kupione=[];D.klientki.forEach(k=>k.karnety.forEach(c=>{if(c.zakup>=od&&c.zakup<=do_)kupione.push({k,c})}));
+  const przychod=kupione.reduce((a,x)=>a+(x.c.cena||0),0),wartWej=w.reduce((a,x)=>a+wart(x),0),bezCeny=w.filter(x=>x.c.cena==null).length;
+  const dniB=zajB;
+  const perK=[...new Set(w.map(x=>x.k))].sort((a,b)=>a.imie.localeCompare(b.imie,'pl')).map(k=>{const kw=w.filter(x=>x.k===k);return {k,n:kw.length,x:kw.filter(x=>x.u.sala==='XXS').length,b:kw.filter(x=>x.u.sala==='BALANCE').length,wart:kw.reduce((a,x)=>a+wart(x),0),zost:Math.max(0,karnet(k).wejscia-karnet(k).uzycia.length)}});
+  return {od,do_,w,xs,bs,hX,hB,sX,sB,zajX,zajB,odZajec,oplB,oplX,kupione,przychod,wartWej,bezCeny,dniB,perK,wynik:wartWej-oplB-oplX,wynikKasa:przychod-oplB-oplX};
+}
+function rysujEksp(){
+  if(!$('#eOd').value){zakres('mies');return}
+  const R=licz(),U=D.ust,g=v=>(Math.round(v*100)/100).toLocaleString('pl-PL')+' h';
+  $('#podsum').innerHTML='<div class="sum">'+
+    '<div><b>'+R.w.length+'</b><span>wejść w okresie</span></div><div><b>'+R.perK.length+'</b><span>klientek</span></div>'+
+    '<div style="background:var(--lav2)"><b>'+R.xs.length+' · '+g(R.hX)+'</b><span>XXS (wejścia · godziny)</span></div><div style="background:var(--pink2)"><b>'+R.bs.length+' · '+g(R.hB)+'</b><span>BALANCE (wejścia · godziny)</span></div>'+
+    '<div><b>'+zl(R.oplB)+'</b><span>opłata za BALANCE: '+g(R.sB)+' sali × '+zl(U.bal)+' ('+(R.odZajec?'od zajęć':'od każdej klientki')+')</span></div>'+(U.xxs?'<div><b>'+zl(R.oplX)+'</b><span>opłata za XXS ('+zl(U.xxs)+'/h)</span></div>':'<div><b>'+R.zajB+' · '+R.zajX+'</b><span>zajęcia BALANCE · XXS (dni)</span></div>')+
+    '<div><b>'+zl(R.przychod)+'</b><span>przychód z karnetów kupionych w okresie ('+R.kupione.length+')</span></div><div><b>'+zl(R.wartWej)+'</b><span>wartość wykorzystanych wejść</span></div>'+
+    '<div style="grid-column:1/-1;background:#fff6cf"><b>'+zl(R.wynik)+'</b><span>zarobek z wejść po opłatach za sale (wartość wejść − sale)'+(R.bezCeny?' · '+R.bezCeny+' wejść bez ceny karnetu – nie liczone':'')+'</span></div></div>';
+  $('#eXlsx').disabled=$('#ePdf').disabled=!R.w.length&&!R.kupione.length;
+}
+
+/* .xlsx bez bibliotek: kilka plików XML spakowanych w ZIP (bez kompresji) */
+const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return b=>{let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=t[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0}})();
+function zip(pliki){const enc=new TextEncoder(),cz=[],cd=[];let off=0;
+  const u16=n=>[n&255,(n>>>8)&255],u32=n=>[n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255];
+  pliki.forEach(([nazwa,tekst])=>{const n=enc.encode(nazwa),d=enc.encode(tekst),c=CRC(d);
+    const lh=new Uint8Array([0x50,0x4b,3,4,...u16(20),...u16(0x800),...u16(0),...u16(0),...u16(0x21),...u32(c),...u32(d.length),...u32(d.length),...u16(n.length),...u16(0)]);
+    cz.push(lh,n,d);cd.push(new Uint8Array([0x50,0x4b,1,2,...u16(20),...u16(20),...u16(0x800),...u16(0),...u16(0),...u16(0x21),...u32(c),...u32(d.length),...u32(d.length),...u16(n.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]),n);
+    off+=lh.length+n.length+d.length});
+  const cdl=cd.reduce((a,x)=>a+x.length,0);
+  return new Blob([...cz,...cd,new Uint8Array([0x50,0x4b,5,6,0,0,0,0,...u16(pliki.length),...u16(pliki.length),...u32(cdl),...u32(off),0,0])],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})}
+const xe=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function arkusz(wiersze,szer){const kol=i=>{let s='';i++;while(i){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s};
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols>'+(szer||[]).map((w,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>').join('')+'</cols><sheetData>'+
+    wiersze.map((r,ri)=>'<row r="'+(ri+1)+'">'+r.map((v,ci)=>{const ref=kol(ci)+(ri+1),bold=ri===0||(v&&v.b);const val=v&&typeof v==='object'?v.v:v;
+      if(val===''||val==null)return '';
+      if(typeof val==='number')return '<c r="'+ref+'"'+(bold?' s="1"':'')+'><v>'+val+'</v></c>';
+      return '<c r="'+ref+'" t="inlineStr"'+(bold?' s="1"':'')+'><is><t xml:space="preserve">'+xe(val)+'</t></is></c>'}).join('')+'</row>').join('')+'</sheetData></worksheet>'}
+function xlsx(arkusze){
+  const ws=arkusze.map((a,i)=>['xl/worksheets/sheet'+(i+1)+'.xml',arkusz(a.w,a.szer)]);
+  return zip([['[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'+ws.map((_,i)=>'<Override PartName="/xl/worksheets/sheet'+(i+1)+'.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('')+'</Types>'],
+    ['_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
+    ['xl/workbook.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'+arkusze.map((a,i)=>'<sheet name="'+xe(a.n)+'" sheetId="'+(i+1)+'" r:id="rId'+(i+1)+'"/>').join('')+'</sheets></workbook>'],
+    ['xl/_rels/workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+arkusze.map((_,i)=>'<Relationship Id="rId'+(i+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet'+(i+1)+'.xml"/>').join('')+'<Relationship Id="rId'+(arkusze.length+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
+    ['xl/styles.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="2"><xf/><xf fontId="1" applyFont="1"/></cellXfs></styleSheet>']].concat(ws));
+}
+const r2=n=>Math.round(n*100)/100;
+$('#eXlsx').onclick=()=>{const R=licz(),U=D.ust,B=v=>({v,b:1});
+  const pods=[['Rozliczenie karnetów',''],['Okres',pl(R.od)+' – '+pl(R.do_)],['',''],
+    [B('Wejścia razem'),R.w.length],['XXS – wejścia',R.xs.length],['XXS – godziny',r2(R.hX)],['BALANCE – wejścia',R.bs.length],['BALANCE – godziny',r2(R.hB)],['BALANCE – zajęcia (dni)',R.zajB],['XXS – zajęcia (dni)',R.zajX],['Opłata za salę liczona',R.odZajec?'od zajęć (1 dzień na sali = '+U.czas+' h)':'od każdej klientki (wejście = '+U.czas+' h)'],['BALANCE – godziny sali do opłaty',r2(R.sB)],['XXS – godziny sali do opłaty',r2(R.sX)],['',''],
+    ['Stawka BALANCE (zł/h)',U.bal],[B('Opłata za BALANCE (zł)'),r2(R.oplB)],['Stawka XXS (zł/h)',U.xxs],['Opłata za XXS (zł)',r2(R.oplX)],['',''],
+    ['Karnety kupione w okresie',R.kupione.length],[B('Przychód z karnetów kupionych w okresie (zł)'),r2(R.przychod)],[B('Wartość wykorzystanych wejść (zł)'),r2(R.wartWej)],[B('Zarobek z wejść po opłatach za sale (zł)'),r2(R.wynik)],['Przychód z karnetów − opłaty za sale (zł)',r2(R.wynikKasa)],
+    ['Wejścia bez ceny karnetu (nieliczone w wartości)',R.bezCeny]];
+  const dni=[['Data','Dzień','Klientka','Sala','Godziny','Wartość wejścia (zł)']].concat(R.w.map(x=>[pl(x.u.data),DN[zIso(x.u.data).getDay()],x.k.imie,x.u.sala,U.czas,x.c.cena!=null?r2(x.c.cena/x.c.wejscia):'']));
+  const kli=[['Klientka','Wejścia','XXS','BALANCE','Wartość wejść (zł)','Zostało w karnecie','Telefon']].concat(R.perK.map(p=>[p.k.imie,p.n,p.x,p.b,r2(p.wart),p.zost,p.k.tel||'']));
+  const kar=[['Klientka','Data zakupu','Wejść','Ważny do','Cena (zł)','Wykorzystane']].concat(R.kupione.map(x=>[x.k.imie,pl(x.c.zakup),x.c.wejscia,pl(iso(waznyDo(x.c))),x.c.cena!=null?x.c.cena:'',x.c.uzycia.length]));
+  pobierz(xlsx([{n:'Podsumowanie',w:pods,szer:[46,22]},{n:'Według dni',w:dni,szer:[12,6,26,10,9,18]},{n:'Według klientek',w:kli,szer:[26,9,7,10,18,18,16]},{n:'Karnety w okresie',w:kar,szer:[26,13,8,13,10,13]}]),'Karnety_'+R.od+'_'+R.do_+'.xlsx');
+};
+$('#ePdf').onclick=()=>{const R=licz(),U=D.ust,g=v=>r2(v).toLocaleString('pl-PL');
+  $('#druk').innerHTML='<h1>Rozliczenie karnetów</h1><p>Okres: <b>'+pl(R.od)+' – '+pl(R.do_)+'</b> · wygenerowano '+pl(iso(new Date()))+'</p>'+
+    '<h2>Podsumowanie</h2><table>'+[['Wejścia razem',R.w.length],['XXS',R.xs.length+' wejść · '+g(R.hX)+' h'],['BALANCE',R.bs.length+' wejść · '+g(R.hB)+' h · '+R.dniB+' dni zajęć'],
+      ['Opłata za BALANCE ('+g(R.sB)+' h sali × '+zl(U.bal)+', '+(R.odZajec?'od zajęć':'od każdej klientki')+')',zl(R.oplB)],['Opłata za XXS ('+zl(U.xxs)+'/h)',zl(R.oplX)],['Przychód z karnetów kupionych w okresie ('+R.kupione.length+')',zl(R.przychod)],
+      ['Wartość wykorzystanych wejść',zl(R.wartWej)],['Zarobek z wejść po opłatach za sale',zl(R.wynik)]].map(r=>'<tr><td>'+r[0]+'</td><td class="r"><b>'+r[1]+'</b></td></tr>').join('')+'</table>'+
+    '<h2>Według klientek</h2><table><tr><th>Klientka</th><th class="r">Wejścia</th><th class="r">XXS</th><th class="r">BALANCE</th><th class="r">Wartość</th><th class="r">Zostało</th></tr>'+R.perK.map(p=>'<tr><td>'+esc(p.k.imie)+'</td><td class="r">'+p.n+'</td><td class="r">'+p.x+'</td><td class="r">'+p.b+'</td><td class="r">'+zl(p.wart)+'</td><td class="r">'+p.zost+'</td></tr>').join('')+'</table>'+
+    '<h2>Według dni</h2><table><tr><th>Data</th><th>Klientka</th><th>Sala</th></tr>'+R.w.map(x=>'<tr><td>'+kr(x.u.data)+'.'+x.u.data.slice(0,4)+'</td><td>'+esc(x.k.imie)+'</td><td>'+x.u.sala+'</td></tr>').join('')+'</table>';
+  const t=document.title;document.title='Karnety_'+R.od+'_'+R.do_;setTimeout(()=>{window.print();document.title=t},50)};
+
+/* ── ustawienia i kopia zapasowa ── */
+function rysujUst(){const U=D.ust;$$('#uOpl button').forEach(b=>b.classList.toggle('on',b.dataset.v===(U.oplata||'zajecia')));$('#uBal').value=U.bal;$('#uXxs').value=U.xxs;$('#uCzas').value=U.czas;$('#uKier').value=U.kier;$('#uMsg').value=U.msg;
+  const o=+(localStorage.getItem(KEY_KOPIA)||0);$('#kopiaInfo').textContent=o?'Ostatnia kopia: '+pl(iso(new Date(o)))+'.':'Nie ma jeszcze żadnej kopii.'}
+[['uBal','bal',1],['uXxs','xxs',1],['uCzas','czas',1],['uKier','kier',0],['uMsg','msg',0]].forEach(([id,k,num])=>$('#'+id).addEventListener('change',()=>{const v=$('#'+id).value;D.ust[k]=num?Math.max(0,+v||0):v.trim();if(k==='czas'&&!D.ust.czas)D.ust.czas=1;zapisz();toast('Zapisane')}));
+$('#uOpl').onclick=e=>{const b=e.target.closest('button');if(!b)return;D.ust.oplata=b.dataset.v;zapisz();rysujUst();toast('Zapisane')};
+async function pobierz(blob,nazwa){
+  try{const f=new File([blob],nazwa,{type:blob.type});if(navigator.canShare&&navigator.canShare({files:[f]})&&/iPhone|iPad|Android/i.test(navigator.userAgent)){await navigator.share({files:[f],title:nazwa});return true}}catch(e){if(e&&e.name==='AbortError')return false}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nazwa;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);return true}
+async function zapiszKopie(){const b=new Blob([JSON.stringify(Object.assign({aplikacja:'Karnety',zapisano:new Date().toISOString()},D),null,1)],{type:'application/json'});
+  if(await pobierz(b,'Karnety-kopia-'+iso(new Date())+'.json')){try{localStorage.setItem(KEY_KOPIA,String(Date.now()))}catch(e){}toast('💾 Kopia zapisana');rysuj()}}
+$('#kZap').onclick=zapiszKopie;$('#kWcz').onclick=()=>$('#kPlik').click();
+$('#kPlik').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{const x=JSON.parse(await f.text());if(!x||!Array.isArray(x.klientki))throw 0;
+    if(D.klientki.length&&!confirm('Zastąpić obecne dane ('+D.klientki.length+' klientek) kopią z pliku ('+x.klientki.length+' klientek)?'))return;
+    D={wersja:1,klientki:x.klientki,ust:Object.assign({},D.ust,x.ust||{})};if(zapisz()){rysuj();toast('✓ Wczytano kopię ('+x.klientki.length+' klientek)')}}catch(err){toast('To nie jest plik kopii „Karnetów”')}};
+
+/* ── komunikaty ── */
+let tT=null;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),2600)}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){$$('.dlg.on').forEach(d=>d.classList.remove('on'));$('#menu').classList.remove('on')}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)rysuj()});
+pokaz('lista');
+if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
