@@ -1,7 +1,7 @@
 {
   "name": "Karnety",
   "short_name": "Karnety",
-  "description": "Cyfrowe karnety i lista obecności na zajęciach fitness",
+  "description": "Cyfrowe karnety, lista obecności i planer treningowy",
   "lang": "pl",
   "start_url": "./",
   "scope": "./",

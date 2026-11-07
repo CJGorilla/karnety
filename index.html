@@ -24,7 +24,11 @@ html{-webkit-text-size-adjust:100%}
 body{margin:0;min-height:100vh;background:radial-gradient(circle at 20% 0%,#fff3f8 0,transparent 45%),radial-gradient(circle at 100% 60%,#f9d9ea 0,transparent 40%),var(--bg);color:var(--ink);font:16px/1.4 var(--font);-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer;border:0;background:none;padding:0}
-.wrap{max-width:560px;margin:0 auto;padding:calc(10px + env(safe-area-inset-top)) 12px calc(110px + env(safe-area-inset-bottom))}
+.wrap{max-width:560px;margin:0 auto;padding:calc(10px + env(safe-area-inset-top)) 12px calc(160px + env(safe-area-inset-bottom))}
+/* karty aplikacji (dolny pasek) – ten sam w planer.html */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:center;gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:var(--win);border-top:2px solid var(--line)}
+.tabs a{flex:1;max-width:150px;text-align:center;text-decoration:none;color:var(--ink);font-weight:800;font-size:13px;border:2px solid var(--line);border-radius:12px;padding:7px 4px;background:var(--win)}
+.tabs a.on{background:var(--lav)}
 /* okno w stylu retro – cienka ramka, mały twardy cień */
 .win{background:var(--win);border:2px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:12px}
 .bar{display:flex;align-items:center;gap:8px;padding:6px 8px 6px 12px;background:var(--lav);border-bottom:2px solid var(--line);min-height:34px}
@@ -66,7 +70,7 @@ button{cursor:pointer;border:0;background:none;padding:0}
 .pusto{text-align:center;color:var(--mute);padding:26px 14px}
 .pusto b{display:block;font-size:18px;color:var(--ink);margin-bottom:6px}
 /* przycisk + */
-.fab{position:fixed;right:calc(16px + env(safe-area-inset-right));bottom:calc(18px + env(safe-area-inset-bottom));width:58px;height:58px;border:2px solid var(--line);border-radius:18px;background:var(--yel);box-shadow:3px 3px 0 var(--line);font-size:32px;font-weight:700;line-height:1;z-index:10}
+.fab{position:fixed;right:calc(16px + env(safe-area-inset-right));bottom:calc(80px + env(safe-area-inset-bottom));width:58px;height:58px;border:2px solid var(--line);border-radius:18px;background:var(--yel);box-shadow:3px 3px 0 var(--line);font-size:32px;font-weight:700;line-height:1;z-index:10}
 .fab:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--line)}
 /* menu */
 .menu{position:fixed;inset:0;z-index:30;background:rgba(61,42,60,.25);display:none}
@@ -118,12 +122,12 @@ details.mc summary{font-weight:800;cursor:pointer;padding:4px 0}
 .sum{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px}
 .sum div{border:2px solid var(--line);border-radius:12px;padding:8px 10px;background:var(--win)}
 .sum b{display:block;font-size:20px}.sum span{font-size:12px;color:var(--mute)}
-.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;font-weight:700;opacity:0;transition:opacity .25s;pointer-events:none;z-index:60;max-width:calc(100vw - 32px);text-align:center}
+.toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;font-weight:700;opacity:0;transition:opacity .25s;pointer-events:none;z-index:60;max-width:calc(100vw - 32px);text-align:center}
 .toast.on{opacity:1}
 .toast .btn{margin-left:8px;padding:3px 10px;font-size:13px;box-shadow:none;pointer-events:auto}
 .widok{display:none}.widok.on{display:block}
 #druk{display:none}
-@media print{body{background:#fff}.wrap,.fab,.menu,.dlg,.toast{display:none!important}#druk{display:block;font:12px/1.35 -apple-system,"Segoe UI",Arial,sans-serif;color:#000}
+@media print{body{background:#fff}.wrap,.fab,.menu,.dlg,.toast,.tabs{display:none!important}#druk{display:block;font:12px/1.35 -apple-system,"Segoe UI",Arial,sans-serif;color:#000}
   #druk h1{font-size:18px;margin:0 0 4px}#druk h2{font-size:14px;margin:14px 0 4px}#druk table{font-size:11px}#druk th,#druk td{border-bottom:1px solid #ccc;padding:3px 4px}#druk .sum div{border:1px solid #999}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -168,7 +172,7 @@ details.mc summary{font-weight:800;cursor:pointer;padding:4px 0}
     <div class="win"><div class="bar pink"><h2>💾 Kopia zapasowa</h2><div class="dots" aria-hidden="true"><i></i><i></i><i></i></div></div><div class="body">
       <p class="sub" style="margin-top:0" id="kopiaInfo"></p>
       <div class="akc" style="margin-top:0"><button class="btn yel" id="kZap">⬇ Zapisz kopię</button><button class="btn" id="kWcz">⬆ Wczytaj kopię</button><input type="file" id="kPlik" accept=".json,application/json" hidden></div>
-      <p class="hint">Wszystko zapisuje się samo w telefonie. Kopię najlepiej wysłać sobie mailem albo zapisać w iCloud (Pliki). Wczytanie kopii zastępuje obecne dane.</p>
+      <p class="hint">Wszystko zapisuje się samo w telefonie. Kopię najlepiej wysłać sobie mailem albo zapisać w iCloud (Pliki). Kopia zawiera też plany i bazę ćwiczeń z Planera. Wczytanie kopii zastępuje obecne dane.</p>
     </div></div>
   </section>
 </div>
@@ -204,12 +208,24 @@ details.mc summary{font-weight:800;cursor:pointer;padding:4px 0}
   <button class="btn yel wide" id="weOk" disabled>Wybierz salę</button>
 </div></div></div>
 
+<!-- ważność karnetu: przedłużenie / skrócenie -->
+<div class="dlg" id="dWaz"><div class="win" role="dialog" aria-modal="true" aria-labelledby="dWazT"><div class="bar yel"><h3 id="dWazT">Ważność karnetu</h3><button class="ib" data-zamknij aria-label="Zamknij">✕</button></div><div class="body">
+  <p style="margin:0 0 6px;font-weight:800" id="wazKto"></p>
+  <p class="hint" id="wazDom" style="margin:0 0 12px"></p>
+  <div class="pole"><label for="wazDni">Zostało dni do końca</label><input type="number" id="wazDni" inputmode="numeric" step="1"></div>
+  <div class="akc" style="margin:-4px 0 12px"><button class="btn" data-plus="-7">−7</button><button class="btn" data-plus="-1">−1</button><button class="btn" data-plus="1">+1</button><button class="btn" data-plus="7">+7</button><button class="btn" data-plus="14">+14</button></div>
+  <div class="pole"><label for="wazData">Ważny do</label><input type="date" id="wazData"></div>
+  <button class="btn yel wide" id="wazOk">✓ Zapisz</button>
+  <button class="btn wide" id="wazReset" style="margin-top:10px">Przywróć zwykły czas</button>
+</div></div></div>
+
 <!-- cofnięcie wejścia -->
 <div class="dlg" id="dCof"><div class="win" role="dialog" aria-modal="true" aria-labelledby="dCofT"><div class="bar plum"><h3 id="dCofT">Cofnąć wejście?</h3><button class="ib" data-zamknij aria-label="Zamknij" style="background:transparent;border-color:#fff;color:#fff">✕</button></div><div class="body">
   <p id="dCofTxt" style="margin:0 0 12px"></p>
   <div class="rzad"><button class="btn" data-zamknij>Zostaw</button><button class="btn red" id="cofOk">Cofnij wejście</button></div>
 </div></div></div>
 
+<nav class="tabs"><a href="index.html" class="on">📋 Obecność</a><a href="planer.html#plany">🏋 Plany</a><a href="planer.html#baza">📚 Baza</a><a href="planer.html#ust">⚙ Planer</a></nav>
 <div id="druk"></div>
 <div class="toast" id="toast"></div>
 
@@ -238,7 +254,7 @@ function zapisz(){try{localStorage.setItem(KEY,JSON.stringify(D));return true}ca
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 const kl=id=>D.klientki.find(k=>k.id===id);
 const karnet=k=>k.karnety[k.karnety.length-1];
-const waznyDo=c=>{const d=zIso(c.zakup);d.setDate(d.getDate()+c.wejscia*7);return d};  // N wejść = N tygodni
+const waznyDo=c=>{if(c.do)return zIso(c.do);const d=zIso(c.zakup);d.setDate(d.getDate()+c.wejscia*7);return d};  // N wejść = N tygodni, chyba że zmieniona ważność (c.do)
 const dniDo=c=>Math.round((waznyDo(c)-dzis())/864e5);
 const wszystkie=()=>{const o=[];D.klientki.forEach(k=>k.karnety.forEach(c=>c.uzycia.forEach(u=>o.push({k,c,u}))));return o};
 
@@ -265,7 +281,7 @@ function rysujListe(){
     const sq=[...Array(c.wejscia)].map((_,i)=>{if(i<u){const x=c.uzycia[i];return '<button class="s '+(x.sala==='XXS'?'x':'b')+'" data-cof="'+k.id+'" data-i="'+i+'" aria-label="Wejście '+(i+1)+': '+x.sala+' '+pl(x.data)+'" title="'+x.sala+' · '+pl(x.data)+'">'+(x.sala==='XXS'?'X':'B')+'</button>'}
       if(i===u&&dd>=0)return '<button class="s next" data-we="'+k.id+'" aria-label="Zaznacz wejście '+(i+1)+'"></button>';
       return '<span class="s free" aria-hidden="true"></span>'}).join('');
-    return '<div class="win kl"><div class="bar"><h3>'+esc(k.imie)+'</h3><span class="badge '+bd[0]+'">'+bd[1]+'</span></div><div class="body">'+
+    return '<div class="win kl"><div class="bar"><h3>'+esc(k.imie)+'</h3><button class="badge '+bd[0]+'" data-wazn="'+k.id+'" aria-label="Zmień ważność karnetu">'+bd[1]+(c.do?' ✎':'')+'</button><button class="ib" data-plan="'+k.id+'" aria-label="Plan treningowy: '+esc(k.imie)+'" title="Plan treningowy">📋</button></div><div class="body">'+
       '<div class="sq">'+sq+'</div>'+
       '<div class="meta"><span>zostało <b>'+Math.max(0,zost)+'</b> z '+c.wejscia+'</span><span>karnet od '+pl(c.zakup)+' do '+pl(iso(waznyDo(c)))+'</span></div>'+
       '<div class="akc">'+(koniec?'<button class="btn yel" data-nowy="'+k.id+'">＋ Nowy karnet</button>':'')+(k.tel?'<button class="btn wa" data-wa="'+k.id+'">💬 WhatsApp</button>':'')+'<button class="btn" data-ed="'+k.id+'">✎ Edytuj</button></div></div></div>'}).join('');
@@ -287,10 +303,26 @@ $('#lista').addEventListener('click',e=>{
   else if(t.dataset.ed)edytuj(t.dataset.ed);
   else if(t.dataset.nowy)nowyKarnet(t.dataset.nowy);
   else if(t.dataset.wa)whatsapp(t.dataset.wa);
+  else if(t.dataset.wazn)waznosc(t.dataset.wazn);
+  else if(t.dataset.plan)location.href='planer.html#kl='+encodeURIComponent(t.dataset.plan);   // plan tej klientki w Planerze
 });
 $$('.sala').forEach(s=>s.onclick=()=>{sala=s.dataset.sala;$$('.sala').forEach(x=>x.classList.toggle('on',x===s));$('#weOk').disabled=false;$('#weOk').textContent='✓ Zatwierdź wejście – '+sala});
 $('#weOk').onclick=()=>{if(!we||!sala)return;const k=kl(we),c=karnet(k),d=$('#weData').value||iso(new Date());
   c.uzycia.push({data:d,sala,zapisano:new Date().toISOString()});if(zapisz()){zamknij('dWe');rysuj();const z=c.wejscia-c.uzycia.length;toast('✓ '+k.imie.split(' ')[0]+' – '+sala+' · zostało '+z)}};
+
+/* ── ważność karnetu: klik w „X dni do końca” → ile dni zostało (zapis jako c.do) ── */
+let waz=null;
+function wazUstaw(n){const d=dzis();d.setDate(d.getDate()+n);$('#wazDni').value=n;$('#wazData').value=iso(d)}
+function waznosc(id){waz=kl(id);const c=karnet(waz),dom=zIso(c.zakup);dom.setDate(dom.getDate()+c.wejscia*7);
+  $('#wazKto').textContent=waz.imie+' · karnet '+c.wejscia+' '+wejsciaSlowo(c.wejscia)+' od '+pl(c.zakup);
+  $('#wazDom').textContent='Zwykły czas: do '+pl(iso(dom))+(c.do?' · teraz zmieniony na '+pl(c.do):'');$('#wazReset').style.display=c.do?'':'none';
+  wazUstaw(dniDo(c));otworz('dWaz')}
+$('#wazDni').oninput=()=>{const n=parseInt($('#wazDni').value,10);if(!isNaN(n)){const d=dzis();d.setDate(d.getDate()+n);$('#wazData').value=iso(d)}};
+$('#wazData').oninput=()=>{if($('#wazData').value)$('#wazDni').value=Math.round((zIso($('#wazData').value)-dzis())/864e5)};
+$$('#dWaz [data-plus]').forEach(b=>b.onclick=()=>wazUstaw((parseInt($('#wazDni').value,10)||0)+ +b.dataset.plus));
+$('#wazOk').onclick=()=>{const v=$('#wazData').value,c=karnet(waz);if(!v){toast('Wybierz datę');return}if(v<c.zakup){toast('Koniec nie może być przed zakupem');return}
+  c.do=v;if(zapisz()){zamknij('dWaz');rysuj();toast('✓ Ważny do '+pl(v))}};
+$('#wazReset').onclick=()=>{const c=karnet(waz);c.do=null;if(zapisz()){zamknij('dWaz');rysuj();toast('Przywrócony zwykły czas')}};
 
 /* ── kółko 1–12 ── */
 const ul=$('#koloUl');ul.innerHTML=[...Array(12)].map((_,i)=>'<li data-v="'+(i+1)+'">'+(i+1)+'</li>').join('');
@@ -448,13 +480,15 @@ $('#uOpl').onclick=e=>{const b=e.target.closest('button');if(!b)return;D.ust.opl
 async function pobierz(blob,nazwa){
   try{const f=new File([blob],nazwa,{type:blob.type});if(navigator.canShare&&navigator.canShare({files:[f]})&&/iPhone|iPad|Android/i.test(navigator.userAgent)){await navigator.share({files:[f],title:nazwa});return true}}catch(e){if(e&&e.name==='AbortError')return false}
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nazwa;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);return true}
-async function zapiszKopie(){const b=new Blob([JSON.stringify(Object.assign({aplikacja:'Karnety',zapisano:new Date().toISOString()},D),null,1)],{type:'application/json'});
+async function zapiszKopie(){let pl_=null;try{pl_=JSON.parse(localStorage.getItem('planer-v1')||'null')}catch(e){}   // kopia obejmuje też plany i bazę ćwiczeń
+  const b=new Blob([JSON.stringify(Object.assign({aplikacja:'Karnety',zapisano:new Date().toISOString()},D,pl_?{planer:pl_}:{}),null,1)],{type:'application/json'});
   if(await pobierz(b,'Karnety-kopia-'+iso(new Date())+'.json')){try{localStorage.setItem(KEY_KOPIA,String(Date.now()))}catch(e){}toast('💾 Kopia zapisana');rysuj()}}
 $('#kZap').onclick=zapiszKopie;$('#kWcz').onclick=()=>$('#kPlik').click();
 $('#kPlik').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
   try{const x=JSON.parse(await f.text());if(!x||!Array.isArray(x.klientki))throw 0;
     if(D.klientki.length&&!confirm('Zastąpić obecne dane ('+D.klientki.length+' klientek) kopią z pliku ('+x.klientki.length+' klientek)?'))return;
-    D={wersja:1,klientki:x.klientki,ust:Object.assign({},D.ust,x.ust||{})};if(zapisz()){rysuj();toast('✓ Wczytano kopię ('+x.klientki.length+' klientek)')}}catch(err){toast('To nie jest plik kopii „Karnetów”')}};
+    D={wersja:1,klientki:x.klientki,ust:Object.assign({},D.ust,x.ust||{})};if(x.planer&&Array.isArray(x.planer.plany)){try{localStorage.setItem('planer-v1',JSON.stringify(x.planer))}catch(e){}}
+    if(zapisz()){rysuj();toast('✓ Wczytano kopię ('+x.klientki.length+' klientek'+(x.planer?', '+x.planer.plany.length+' planów':'')+')')}}catch(err){toast('To nie jest plik kopii „Karnetów”')}};
 
 /* ── komunikaty ── */
 let tT=null;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),2600)}

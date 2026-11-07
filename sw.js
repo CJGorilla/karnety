@@ -1,7 +1,7 @@
 // Karnety – działanie bez internetu: pliki aplikacji w pamięci telefonu. Dane trenerki są osobno (localStorage) i nigdy nie idą do sieci.
 // Nowa wersja aplikacji = zmień WERSJA; stara pamięć plików zostaje usunięta, dane zostają nietknięte.
-const WERSJA = 'karnety-1';
-const PLIKI = ['./', './index.html', './manifest.webmanifest', './ikona-192.png', './ikona-512.png', './ikona-maskable-512.png', './apple-touch-icon.png'];
+const WERSJA = 'karnety-3';   // 3: zmiana ważności karnetu
+const PLIKI = ['./', './index.html', './planer.html', './manifest.webmanifest', './ikona-192.png', './ikona-512.png', './ikona-maskable-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(WERSJA).then(c => c.addAll(PLIKI)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== WERSJA).map(x => caches.delete(x)))).then(() => self.clients.claim())); });
 // najpierw sieć (żeby poprawki docierały), bez sieci – pamięć

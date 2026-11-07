@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="ikona-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Karnety">
+<meta name="theme-color" content="#fbe4ef">
+<title>Planer</title>
+<!-- Planer treningowy – druga karta aplikacji Karnety (ta sama instalacja, ta sama pamięć telefonu).
+     Dane: localStorage „planer-v1” = {slownik, cw (baza ćwiczeń), plany, jak (Jak czytać plan)}. Klientki czytane z „karnety-v1” (tylko odczyt).
+     Kopia zapasowa = jeden plik .json z obecnością i planami (ten sam format co kopia w Karnetach). Mapa projektu: Karnety/Planer – mapa.html. -->
+<style>
+:root{--bg:#fbe4ef;--win:#fffafc;--ink:#3d2a3c;--mute:#8a6f86;--line:#5b3a5a;--lav:#b7a9f4;--lav2:#ded6fb;--pink:#f59cc3;--pink2:#fcd6e6;--yel:#fbe58c;--plum:#8c3b63;--ok:#57b884;--bad:#e0566f;
+  --r:14px;--sh:3px 3px 0 var(--line);--font:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 20% 0%,#fff3f8 0,transparent 45%),radial-gradient(circle at 100% 60%,#f9d9ea 0,transparent 40%),var(--bg);color:var(--ink);font:16px/1.4 var(--font);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+.wrap{max-width:640px;margin:0 auto;padding:calc(10px + env(safe-area-inset-top)) 12px calc(160px + env(safe-area-inset-bottom))}
+.win{background:var(--win);border:2px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:12px}
+.bar{display:flex;align-items:center;gap:8px;padding:6px 8px 6px 12px;background:var(--lav);border-bottom:2px solid var(--line);min-height:34px}
+.bar.pink{background:var(--pink)}.bar.plum{background:var(--plum);color:#fff}.bar.yel{background:var(--yel)}.bar.p2{background:var(--pink2)}
+.bar h1,.bar h2,.bar h3{margin:0;font-size:15px;font-weight:800;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dots{display:flex;gap:4px;flex:none}.dots i{width:14px;height:14px;border:2px solid var(--line);border-radius:4px;background:var(--win)}
+.bar.plum .dots i{border-color:#fff;background:transparent}
+.ib{min-width:30px;height:28px;padding:0 6px;border:2px solid var(--line);border-radius:8px;background:var(--win);display:grid;place-items:center;font-size:14px;font-weight:800;flex:none}
+.ib:active{transform:translate(1px,1px)}
+.body{padding:12px}
+.btn{border:2px solid var(--line);border-radius:12px;padding:9px 14px;font-weight:800;font-size:15px;background:var(--win);box-shadow:2px 2px 0 var(--line);transition:transform .08s,box-shadow .08s}
+.btn:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--line)}
+.btn.lav{background:var(--lav)}.btn.pink{background:var(--pink)}.btn.yel{background:var(--yel)}.btn.red{background:#fbd0d7;color:#8c1f33}
+.btn.wide{width:100%}.btn.sm{padding:6px 10px;font-size:13.5px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.sub{font-size:13px;color:var(--mute);margin:4px 2px 12px}
+.badge{font-size:12px;font-weight:800;border:2px solid var(--line);border-radius:99px;padding:1px 8px;background:var(--win);white-space:nowrap}
+.badge.warn{background:var(--yel)}
+.akc{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.pusto{text-align:center;color:var(--mute);padding:26px 14px}.pusto b{display:block;font-size:18px;color:var(--ink);margin-bottom:6px}
+.fab{position:fixed;right:calc(16px + env(safe-area-inset-right));bottom:calc(80px + env(safe-area-inset-bottom));width:58px;height:58px;border:2px solid var(--line);border-radius:18px;background:var(--yel);box-shadow:3px 3px 0 var(--line);font-size:32px;font-weight:700;line-height:1;z-index:10}
+.fab:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--line)}
+/* karty aplikacji (dolny pasek) – ten sam w Karnetach */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:center;gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:var(--win);border-top:2px solid var(--line)}
+.tabs a{flex:1;max-width:150px;text-align:center;text-decoration:none;color:var(--ink);font-weight:800;font-size:13px;border:2px solid var(--line);border-radius:12px;padding:7px 4px;background:var(--win)}
+.tabs a.on{background:var(--lav)}
+/* dialogi */
+.dlg{position:fixed;inset:0;z-index:40;background:rgba(61,42,60,.35);display:none;align-items:flex-end;justify-content:center;padding:12px 12px calc(12px + env(safe-area-inset-bottom))}
+.dlg.on{display:flex}
+.dlg .win{width:min(560px,100%);max-height:90vh;overflow:auto;margin:0;animation:wjazd .25s cubic-bezier(.2,.8,.2,1)}
+.dlg.full .win{max-height:none;height:calc(100vh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+@keyframes wjazd{from{transform:translateY(30px);opacity:0}}
+.pole{margin-bottom:12px}
+.pole label,.lab{display:block;font-size:13px;font-weight:800;margin:0 2px 5px}
+.pole input[type=text],.pole input[type=date],.pole input[type=search],.pole select,.pole textarea,.in{width:100%;border:2px solid var(--line);border-radius:10px;padding:9px 11px;background:#fff;font-size:16px;outline:0}
+.pole textarea{min-height:70px;resize:vertical}
+.in:focus,.pole input:focus,.pole textarea:focus{background:#fffbe6}
+.rzad{display:flex;gap:10px}.rzad>*{flex:1;min-width:0}
+.hint{font-size:12.5px;color:var(--mute);margin:4px 2px 0}
+.req::after{content:" *";color:var(--bad)}
+.seg{display:flex;border:2px solid var(--line);border-radius:12px;overflow:hidden;background:var(--win);flex-wrap:wrap}
+.seg button{flex:1;padding:8px 6px;font-weight:800;font-size:14px;min-width:70px}
+.seg button+button{border-left:2px solid var(--line)}
+.seg button.on{background:var(--lav)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:2px solid var(--line);border-radius:99px;padding:4px 10px;font-size:13px;font-weight:700;background:var(--win)}
+.chip.on{background:var(--lav)}
+/* kwadraciki (serie, dni, RPE) */
+.sq{display:flex;flex-wrap:wrap;gap:6px}
+.sq button{min-width:40px;height:40px;padding:0 6px;border:2px solid var(--line);border-radius:10px;background:var(--win);font-weight:900;font-size:15px}
+.sq button.on{background:var(--pink)}.sq button.end{background:var(--plum);color:#fff}
+/* kółka (jak budzik w iOS) */
+.kola{display:flex;gap:10px;align-items:center}
+.koło{position:relative;height:150px;flex:1;border:2px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
+.koło .okienko{position:absolute;left:8px;right:8px;top:55px;height:40px;border-radius:10px;background:var(--lav2);border:2px solid var(--line);pointer-events:none}
+.koło ul{position:relative;list-style:none;margin:0;padding:55px 0;height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.koło ul::-webkit-scrollbar{display:none}
+.koło li{height:40px;display:grid;place-items:center;scroll-snap-align:center;font-size:22px;font-weight:800;color:var(--mute)}
+.koło li.on{color:var(--ink);transform:scale(1.15)}
+.koło::before,.koło::after{content:"";position:absolute;left:0;right:0;height:50px;z-index:1;pointer-events:none}
+.koło::before{top:0;background:linear-gradient(#fff,rgba(255,255,255,0))}.koło::after{bottom:0;background:linear-gradient(rgba(255,255,255,0),#fff)}
+/* plan */
+.dzien .bar{background:var(--pink2)}
+.dzien .bar input{flex:1;min-width:0;border:0;background:transparent;font-weight:900;font-size:16px;outline:0}
+.w{display:grid;grid-template-columns:34px minmax(0,1fr) auto;grid-template-areas:"lp m a" "lp p a";gap:0 8px;align-items:start;padding:9px 0;border-top:1px dashed #d8c3d4}
+.w>.lp{grid-area:lp}.w>.m{grid-area:m}.w>.pc{grid-area:p}.w>.wa{grid-area:a}
+.w:first-child{border-top:0}
+.w.ss{border-top:0;padding-top:2px}
+.w.hl{background:#fff6cf;border-radius:10px}
+.lp{width:34px;height:34px;border:2px solid var(--line);border-radius:9px;display:grid;place-items:center;font-weight:900;font-size:13px;background:var(--lav2)}
+.cwr{display:flex;gap:6px}
+.cwr .in{padding:7px 9px;font-size:15px}
+.plus{flex:none;width:36px;border:2px solid var(--line);border-radius:10px;background:var(--yel);font-size:20px;font-weight:900}
+.plus.ok{background:#bde9cf;font-size:15px}
+.cwb{width:100%;text-align:left;border:2px solid var(--line);border-radius:10px;padding:7px 9px;background:#fff;font-size:15px;font-weight:700}
+.cwb.pusty{color:var(--mute);font-weight:600}
+.tg{font-size:12px;color:var(--mute);margin:4px 2px 0}.tg.warn{color:#9a6a00;font-weight:700}
+.par{margin-top:6px;width:100%;text-align:left;border:2px solid var(--line);border-radius:10px;padding:6px 9px;background:var(--win);font-size:14px;font-weight:800}
+.par.pusty{color:var(--mute);font-weight:600;border-style:dashed}
+.wa{display:flex;flex-direction:column;gap:4px}
+.wa .ib{min-width:30px;height:26px;font-size:12px}
+.wa .ib.on{background:var(--pink)}
+.rozg{width:100%;min-height:64px;border:2px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff;font-size:15px;resize:vertical}
+.lista-cw button{display:block;width:100%;text-align:left;padding:9px 4px;border-bottom:1px dashed #d8c3d4}
+.lista-cw b{display:block;font-size:15px}.lista-cw span{font-size:12.5px;color:var(--mute)}
+.litera{font-weight:900;color:var(--plum);margin:10px 2px 2px;font-size:13px}
+.st-p{margin:10px 0 4px;font-weight:900}
+.st-r{display:grid;grid-template-columns:1fr 54px;gap:8px;align-items:center;font-size:14px;padding:3px 0;text-align:left;width:100%}
+.st-r .b{height:12px;border:2px solid var(--line);border-radius:99px;background:#fff;overflow:hidden;margin-top:3px}.st-r .b i{display:block;height:100%;background:var(--pink)}
+.st-r .v{text-align:right;font-weight:900}
+.st-0{font-size:13.5px;color:var(--mute)}
+.info{background:#fff6cf;border:2px solid var(--line);border-radius:12px;padding:8px 10px;font-size:13.5px;margin-bottom:10px;display:flex;gap:8px;align-items:center;justify-content:space-between}
+.toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;font-weight:700;opacity:0;transition:opacity .25s;pointer-events:none;z-index:60;max-width:calc(100vw - 32px);text-align:center}
+.toast.on{opacity:1}
+.widok{display:none}.widok.on{display:block}
+#druk{display:none}
+/* wydruk planu – układ jak AS.pdf */
+@page{size:A4 landscape;margin:11mm}
+@media print{body{background:#fff}.wrap,.fab,.dlg,.toast,.tabs{display:none!important}
+  #druk{display:block;font:11.5px/1.35 -apple-system,"Segoe UI",Calibri,Arial,sans-serif;color:#2b2233}
+  #druk .str{page-break-after:always;break-after:page}#druk .str:last-child{page-break-after:auto;break-after:auto}
+  #druk h1{font-size:26px;margin:0 0 4px;color:#111}#druk .pod{font-style:italic;margin:0 0 10px}
+  #druk h2{font-size:22px;color:#6f2fa8;margin:18px 0 6px}#druk h3{font-size:12.5px;color:#6f2fa8;margin:12px 0 4px}
+  #druk .box{background:#f3ecfa;border:1px solid #d9c8ec;padding:7px 9px;min-height:30px;white-space:pre-line}
+  #druk table{width:100%;border-collapse:collapse;margin-top:6px}
+  #druk th{background:#3b2350;color:#fff;font-size:10.5px;padding:7px 4px;border:1px solid #d9c8ec}
+  #druk td{border:1px solid #d9c8ec;padding:6px 5px;height:34px;vertical-align:middle}
+  #druk tr:nth-child(even) td{background:#f3ecfa}
+  #druk td.c{text-align:center}#druk td i{color:#555}
+  #druk tr{break-inside:avoid}}
+/* tablet: wiersz planu w jednej linii, dialogi na środku, statystyki jako panel z boku */
+@media (min-width:760px){
+  .wrap{max-width:1100px;padding-left:20px;padding-right:20px}
+  #plany{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+  .w{grid-template-columns:40px minmax(0,1.5fr) minmax(0,1fr) auto;grid-template-areas:"lp m p a";gap:0 10px;align-items:center}
+  .w>.pc .par{margin-top:0}
+  .wa{flex-direction:row}
+  .w.ss{padding-top:4px}
+  .dlg{align-items:center}
+  .dlg .win{width:min(640px,100%)}
+  .dlg.full{justify-content:flex-end;padding:0;align-items:stretch}
+  .dlg.full .win{width:440px;height:100vh;max-height:100vh;border-radius:0;border-width:0 0 0 2px;box-shadow:none}
+  .dlg.full .win{animation:zbok .25s cubic-bezier(.2,.8,.2,1)}
+  .tabs a{font-size:14px;padding:9px 6px}
+}
+@keyframes zbok{from{transform:translateX(40px);opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="win"><div class="bar plum"><h1 id="tytul">Planer</h1><div class="dots" aria-hidden="true"><i></i><i></i><i></i></div></div>
+    <div class="body" style="padding:8px 12px"><div class="sub" id="podtytul" style="margin:0"></div></div></div>
+  <div id="alerty"></div>
+  <section class="widok" id="w-plany"><div id="plany"></div></section>
+  <section class="widok" id="w-plan"><div id="plan"></div></section>
+  <section class="widok" id="w-baza">
+    <div class="win"><div class="bar"><h2>Baza ćwiczeń</h2><span class="badge" id="bazaIle"></span></div><div class="body">
+      <div class="pole" style="margin-bottom:8px"><input type="search" id="bSzukaj" placeholder="Szukaj (np. 3 litery)…" autocomplete="off"></div>
+      <div class="chips" id="bPartie" style="margin-bottom:8px"></div>
+      <div class="lista-cw" id="bLista"></div></div></div>
+  </section>
+  <section class="widok" id="w-ust">
+    <div class="win"><div class="bar"><h2>Słownik: partie i limitery</h2></div><div class="body">
+      <p class="sub" style="margin-top:0">Jedna linia = partia: mięśnie (limitery) po przecinku. Z tych list wybierasz w formularzu ćwiczenia i według nich liczą się statystyki.</p>
+      <div class="pole"><textarea id="sPartie" style="min-height:190px;font-size:14px"></textarea></div>
+      <div class="rzad"><div class="pole"><label for="sReg">Regiony (po przecinku)</label><input type="text" id="sReg"></div><div class="pole"><label for="sPoz">Pozycje (po przecinku)</label><input type="text" id="sPoz"></div></div>
+      <button class="btn yel" id="sZap">✓ Zapisz słownik</button></div></div>
+    <div class="win"><div class="bar"><h2>„Jak czytać plan” (dodawane do każdego PDF)</h2></div><div class="body">
+      <p class="sub" style="margin-top:0">Linia zaczynająca się od „## ” = pogrubiony nagłówek.</p>
+      <div class="pole"><textarea id="sJak" style="min-height:220px;font-size:14px"></textarea></div>
+      <div class="akc" style="margin-top:0"><button class="btn yel" id="jZap">✓ Zapisz</button><button class="btn" id="jDom">Przywróć tekst z planu AS</button></div></div></div>
+    <div class="win"><div class="bar pink"><h2>💾 Kopia zapasowa (obecność + plany)</h2></div><div class="body">
+      <p class="sub" style="margin-top:0" id="kopiaInfo"></p>
+      <div class="akc" style="margin-top:0"><button class="btn yel" id="kZap">⬇ Zapisz kopię</button><button class="btn" id="kWcz">⬆ Wczytaj kopię</button><input type="file" id="kPlik" accept=".json,application/json" hidden></div>
+      <p class="hint">Jeden plik: klientki i wejścia z Karnetów + baza ćwiczeń i plany. Ten sam plik wczytasz w Karnetach i w Planerze.</p></div></div>
+    <div class="win"><div class="bar"><h2>Przykład</h2></div><div class="body"><button class="btn" id="przyklad">Wczytaj plan AS (przykład)</button><p class="hint">Dodaje 4 dni planu AS i jego 13 ćwiczeń do bazy (bez limiterów – uzupełnisz je w Bazie).</p></div></div>
+  </section>
+</div>
+<button class="fab" id="fab" aria-label="Dodaj">+</button>
+<nav class="tabs"><a href="index.html">📋 Obecność</a><a href="#plany" data-t="plany">🏋 Plany</a><a href="#baza" data-t="baza">📚 Baza</a><a href="#ust" data-t="ust">⚙ Ustawienia</a></nav>
+
+<!-- profil planu -->
+<div class="dlg" id="dProf"><div class="win" role="dialog" aria-modal="true" aria-labelledby="dProfT"><div class="bar"><h3 id="dProfT">Nowy plan – profil</h3><button class="ib" data-zamknij aria-label="Zamknij">✕</button></div><div class="body">
+  <div class="pole"><label for="pKl">Dla kogo (z listy obecności)</label><select id="pKl"></select></div>
+  <div class="pole"><label for="pOsoba" class="req">Imię / nazwa planu</label><input type="text" id="pOsoba" autocomplete="off" placeholder="np. AS"></div>
+  <div class="pole"><label for="pCel">Cel / priorytet</label><textarea id="pCel" placeholder="np. masa mm pośladków, wzmocnienie pleców…"></textarea></div>
+  <div class="pole"><label for="pOgr">Ograniczenia / przeciwwskazania</label><textarea id="pOgr" placeholder="np. zwyrodnienie stawów kolanowych"></textarea></div>
+  <div class="pole"><label for="pNot">Notatki trenera <span style="font-weight:600;color:var(--mute)">(nie drukują się)</span></label><textarea id="pNot"></textarea></div>
+  <div class="rzad"><div class="pole"><label for="pOd">Start planu</label><input type="date" id="pOd"></div><div class="pole"><span class="lab">Tygodni</span><div class="koło" id="pTyg"></div></div></div>
+  <p class="hint" id="pDo" style="margin-top:-6px;margin-bottom:12px"></p>
+  <div class="pole"><span class="lab">Treningi w tygodniu <span style="font-weight:600;color:var(--mute)">(2 kliknięcia = zakres, np. 2–3)</span></span><div class="sq" id="pDni"></div></div>
+  <button class="btn yel wide" id="pOk">✓ Zatwierdź</button>
+  <button class="btn red wide" id="pUsun" style="margin-top:10px">Usuń plan</button>
+</div></div></div>
+
+<!-- ćwiczenie w bazie -->
+<div class="dlg" id="dCw"><div class="win" role="dialog" aria-modal="true" aria-labelledby="dCwT"><div class="bar yel"><h3 id="dCwT">Nowe ćwiczenie</h3><button class="ib" data-zamknij aria-label="Zamknij">✕</button></div><div class="body">
+  <div class="pole"><label for="cNaz" class="req">Nazwa</label><input type="text" id="cNaz" autocomplete="off"><p class="hint" id="cPod"></p></div>
+  <div class="pole"><span class="lab req">Partia</span><div class="chips" id="cPartia"></div></div>
+  <div class="pole"><span class="lab req">Limiter główny</span><div class="chips" id="cLim"><span class="hint">najpierw partia</span></div></div>
+  <div class="pole"><span class="lab req">Region, który pracuje najmocniej</span><div class="seg" id="cReg"></div></div>
+  <div class="pole"><span class="lab req">Pozycja</span><div class="seg" id="cPoz"></div></div>
+  <div class="pole"><span class="lab">Partie pomocnicze <span style="font-weight:600;color:var(--mute)">(liczone jako ½ serii)</span></span><div id="cPom"></div></div>
+  <div class="pole"><label for="cUw">Wskazówka techniczna</label><input type="text" id="cUw" placeholder="np. wyciąg na wysokości biodra"></div>
+  <button class="btn yel wide" id="cOk" disabled>Uzupełnij pola z *</button>
+  <button class="btn red wide" id="cUsun" style="margin-top:10px">Usuń z bazy</button>
+</div></div></div>
+
+<!-- wybór ćwiczenia z bazy -->
+<div class="dlg full" id="dWyb"><div class="win" role="dialog" aria-modal="true" aria-labelledby="dWybT"><div class="bar"><h3 id="dWybT">Wybierz ćwiczenie</h3><button class="ib" data-zamknij aria-label="Zamknij">✕</button></div><div class="body">
+  <div class="pole" style="margin-bottom:8px"><input type="search" id="wSzukaj" placeholder="Szukaj…" autocomplete="off"></div>
+  <div class="chips" id="wPartie" style="margin-bottom:8px"></div>
+  <button class="btn yel sm" id="wNowe">＋ Nowe ćwiczenie</button>
+  <div class="lista-cw" id="wLista" style="margin-top:6px"></div>
+</div></div></div>
+
+<!-- parametry wiersza: serie, powtórzenia, RPE, przerwa -->
+<div class="dlg" id="dPar"><div class="win" role="dialog" aria-modal="true" aria-labelledby="dParT"><div class="bar pink"><h3 id="dParT">Serie i powtórzenia</h3><button class="ib" data-zamknij aria-label="Zamknij">✕</button></div><div class="body">
+  <div class="pole"><span class="lab">Serie <span style="font-weight:600;color:var(--mute)">(2 kliknięcia = zakres, np. 3–4)</span></span><div class="sq" id="aSer"></div></div>
+  <div class="pole"><span class="lab">Powtórzenia od – do</span><div class="kola"><div class="koło" id="aPOd"></div><b>–</b><div class="koło" id="aPDo"></div></div>
+    <div class="akc"><div class="seg" id="aJed" style="flex:1"><button data-v="">powt.</button><button data-v="s">sekundy ″</button></div><button class="ib" id="aPs" style="height:40px;min-width:60px">ps</button></div>
+    <p class="hint">ps = na stronę.</p></div>
+  <div class="pole"><span class="lab">RPE</span><div class="sq" id="aRpe"></div></div>
+  <div class="pole"><span class="lab">Przerwa</span><div class="sq" id="aPrz"></div><input type="text" class="in" id="aPrzI" placeholder="inna, np. 75″" style="margin-top:6px"></div>
+  <div class="rzad"><div class="pole"><label for="aKg">Ciężar</label><input type="text" id="aKg" inputmode="decimal" placeholder="np. 60 kg"></div><div class="pole"><label for="aUw">Uwaga do wiersza</label><input type="text" id="aUw" placeholder="np. region dolny"></div></div>
+  <button class="btn yel wide" id="aOk">✓ Zatwierdź</button>
+</div></div></div>
+
+<!-- statystyki -->
+<div class="dlg full" id="dSt"><div class="win" role="dialog" aria-modal="true" aria-labelledby="dStT"><div class="bar yel"><h3 id="dStT">📊 Statystyki planu</h3><button class="ib" data-zamknij aria-label="Zamknij">✕</button></div><div class="body">
+  <div class="chips" id="stDni" style="margin-bottom:10px"></div><div id="stTresc"></div>
+</div></div></div>
+
+<div id="druk"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+const KEY='planer-v1',KK='karnety-v1',KEY_KOPIA='karnety-ostatnia-kopia';
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const zIso=s=>{const [y,m,d]=s.slice(0,10).split('-').map(Number);return new Date(y,m-1,d)};
+const pl=s=>s?s.slice(8,10)+'.'+s.slice(5,7)+'.'+s.slice(0,4):'';
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const norm=s=>String(s||'').toLowerCase().replace(/\s+/g,' ').trim();
+const lc=(a,b)=>a.localeCompare(b,'pl');
+const lb=n=>String(Math.round(n*10)/10).replace('.',',');
+const zakr=(r,suf)=>!r||r[0]==null?'':(r[0]===r[1]?lb(r[0]):lb(r[0])+'–'+lb(r[1]))+(suf||'');
+
+/* ── domyślne: słownik (do Twojej weryfikacji) i „Jak czytać plan” z planu AS ── */
+const SLOWNIK={partie:[['Pośladki',['Pośladkowy wielki','Pośladkowy średni']],['Uda',['Czworogłowy uda','Kulszowo-goleniowe','Przywodziciele']],['Łydki',['Łydka']],
+  ['Plecy',['Najszerszy grzbietu','Czworoboczny środkowy/dolny','Równoległoboczne','Prostowniki grzbietu']],['Klatka',['Piersiowy większy']],
+  ['Barki',['Naramienny przedni','Naramienny boczny','Naramienny tylny','Stożek rotatorów']],['Ramiona',['Biceps','Triceps']],['Core',['Prosty brzucha','Skośne brzucha']]],
+  regiony:['górny','środkowy','dolny','cały'],pozycje:['rozciągnięta','środkowa','skrócona','pełny zakres']};
+const JAK=['## ′ = minuty • ″ = sekundy','## 1a + 1b = superseria','Dwa różne ćwiczenia wykonywane jedno po drugim bez przerwy lub z krótką przerwą. Jeśli nie możesz wykonać ich w superserii, rozdziel je i wykonaj osobno.',
+  '## Serie wstępne','Przygotuj układ nerwowy, mięśnie i stawy do pracy. Nie zapisuj ich jako serii roboczych, chyba że trener zaznaczy inaczej.',
+  '## RPE','Subiektywna skala odczuwanego wysiłku. W treningu siłowym można ją odnieść do liczby powtórzeń pozostających w zapasie. Wskazuje, z jakim wysiłkiem wykonać serie robocze.','RPE 8 = około 2 powtórzenia w zapasie','RPE 10 = 0 powtórzeń w zapasie',
+  '## Zapis progresji','Wpisuj serie × powtórzenia i ciężar, np. 3×8 (40 kg), a w kolejnej kolumnie 3×6 (42 kg). Korzystaj z 1–4 kart treningowych; niewykorzystane wiersze pozostaw puste.'].join('\n');
+
+/* ── dane ── */
+let P={wersja:1,slownik:JSON.parse(JSON.stringify(SLOWNIK)),cw:[],plany:[],jak:JAK,tryb:'pis'};
+try{const t=localStorage.getItem(KEY);if(t){const x=JSON.parse(t);if(x&&Array.isArray(x.plany))P=Object.assign(P,x)}}catch(e){}
+function zapisz(){try{localStorage.setItem(KEY,JSON.stringify(P));return true}catch(e){toast('⚠ Nie udało się zapisać – zrób kopię zapasową');return false}}
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+const klientki=()=>{try{const x=JSON.parse(localStorage.getItem(KK)||'null');return x&&Array.isArray(x.klientki)?x.klientki:[]}catch(e){return[]}};
+const cwId=id=>P.cw.find(c=>c.id===id);
+const cwNaz=n=>P.cw.find(c=>norm(c.n)===norm(n));
+const pelne=c=>!!(c&&c.n&&c.partia&&c.limiter&&c.region&&c.pozycja);
+const partiaLim=m=>{const p=P.slownik.partie.find(([_,L])=>L.includes(m));return p?p[0]:''};
+const planId=id=>P.plany.find(p=>p.id===id);
+let plan=null;   // otwarty plan
+
+/* ── widoki ── */
+let widok='plany';
+function pokaz(w){widok=w;$$('.widok').forEach(x=>x.classList.toggle('on',x.id==='w-'+w));
+  $$('.tabs [data-t]').forEach(a=>a.classList.toggle('on',a.dataset.t===(w==='plan'?'plany':w)));
+  $('#fab').style.display=w==='plany'||w==='baza'?'':'none';$('#fab').setAttribute('aria-label',w==='baza'?'Nowe ćwiczenie':'Nowy plan');
+  rysuj();window.scrollTo(0,0)}
+$$('.tabs [data-t]').forEach(a=>a.onclick=e=>{e.preventDefault();history.replaceState(null,'','#'+a.dataset.t);pokaz(a.dataset.t)});
+function rysuj(){
+  const nC=P.cw.length,nN=P.cw.filter(c=>!pelne(c)).length;
+  $('#tytul').textContent=widok==='plan'&&plan?'Plan: '+plan.osoba:{plany:'Plany treningowe',baza:'Baza ćwiczeń',ust:'Ustawienia planera',plan:'Plan'}[widok];
+  $('#podtytul').textContent=P.plany.length+' '+(P.plany.length===1?'plan':'planów/plany')+' · '+nC+' ćwiczeń w bazie'+(nN?' · '+nN+' do uzupełnienia':'');
+  const ost=+(localStorage.getItem(KEY_KOPIA)||0),dk=ost?Math.floor((Date.now()-ost)/864e5):null;
+  $('#alerty').innerHTML=(P.plany.length||nC)&&(dk===null||dk>=7)?'<div class="info"><span>💾 '+(dk===null?'Nie ma jeszcze kopii zapasowej.':'Ostatnia kopia: '+dk+' dni temu.')+'</span><button class="btn yel sm" data-kopia>Zapisz kopię</button></div>':'';
+  if(widok==='plany')rysujPlany();else if(widok==='plan')rysujPlan();else if(widok==='baza')rysujBaze();else rysujUst();
+}
+$('#alerty').onclick=e=>{if(e.target.closest('[data-kopia]'))zapiszKopie()};
+
+/* ── lista planów ── */
+function rysujPlany(){
+  if(!P.plany.length){$('#plany').innerHTML='<div class="win"><div class="body pusto"><b>Brak planów</b>Kliknij <b style="display:inline">＋</b>, żeby zacząć od profilu podopiecznej.<br><br><button class="btn" data-przyklad>Albo wczytaj przykład: plan AS</button></div></div>';return}
+  const L=[...P.plany].sort((a,b)=>(b.utw||'').localeCompare(a.utw||''));
+  $('#plany').innerHTML=L.map(p=>{const k=p.kl&&klientki().find(x=>x.id===p.kl);
+    return '<div class="win"><div class="bar p2"><h3>'+esc(p.osoba)+'</h3>'+(k?'<span class="badge">z obecności</span>':'')+'</div><div class="body">'+
+      '<div class="sub" style="margin:0">'+p.dni.length+' '+(p.dni.length===1?'dzień':'dni')+' planu · '+(p.prof.dni?zakr(p.prof.dni)+' × w tyg.':'dni/tydz. nieustalone')+(p.prof.od?' · od '+pl(p.prof.od)+(p.prof.tyg?' ('+p.prof.tyg+' tyg.)':''):'')+'</div>'+
+      (p.prof.cel?'<div style="font-size:14px;margin-top:6px;white-space:pre-line">'+esc(p.prof.cel.split('\n')[0])+'</div>':'')+
+      '<div class="akc"><button class="btn yel sm" data-otw="'+p.id+'">Otwórz</button><button class="btn sm" data-druk="'+p.id+'">🖨 PDF</button></div></div></div>'}).join('');
+}
+$('#plany').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.otw)otworzPlan(b.dataset.otw);else if(b.dataset.druk)drukuj(planId(b.dataset.druk));else if('przyklad' in b.dataset)przyklad()};
+function otworzPlan(id){plan=planId(id);hl=null;history.replaceState(null,'','#plan='+id);pokaz('plan')}
+
+/* ── kółko (przewijane jak budzik) ── */
+function kolo(el,min,max,onch){el.innerHTML='<div class="okienko"></div><ul></ul>';const u=el.querySelector('ul');let v=min,t=null;
+  u.innerHTML=Array.from({length:max-min+1},(_,i)=>'<li data-v="'+(min+i)+'">'+(min+i)+'</li>').join('');
+  const zazn=()=>u.querySelectorAll('li').forEach(li=>li.classList.toggle('on',+li.dataset.v===v));
+  u.addEventListener('scroll',()=>{const n=Math.min(max,Math.max(min,Math.round(u.scrollTop/40)+min));if(n!==v){v=n;zazn();onch&&onch(v)}clearTimeout(t);t=setTimeout(()=>u.scrollTo({top:(v-min)*40,behavior:'smooth'}),140)},{passive:true});
+  u.addEventListener('click',e=>{const li=e.target.closest('li');if(li)ust(+li.dataset.v,true)});
+  function ust(n,g){v=Math.min(max,Math.max(min,n));u.scrollTo({top:(v-min)*40,behavior:g?'smooth':'auto'});zazn();onch&&onch(v)}
+  return {ust,get:()=>v}}
+/* kwadraciki: 1 kliknięcie = jedna wartość, 2. kliknięcie = zakres, kolejne = od nowa */
+function kwadraty(el,wart,fmt,stan,onch){let r=stan;
+  const rys=()=>{el.innerHTML=wart.map(v=>{const on=r&&v>=r[0]&&v<=r[1];return '<button type="button" data-v="'+v+'" class="'+(on?(r[0]!==r[1]&&(v===r[0]||v===r[1])?'end':'on'):'')+'">'+fmt(v)+'</button>'}).join('')};
+  el.onclick=e=>{const b=e.target.closest('button');if(!b)return;const v=+b.dataset.v;
+    if(!r||r[0]!==r[1])r=[v,v];else if(v===r[0])r=null;else r=[Math.min(v,r[0]),Math.max(v,r[0])];rys();onch&&onch(r)};
+  rys();return {get:()=>r,ust:x=>{r=x;rys()}}}
+
+/* ── dialogi ── */
+const otworz=id=>$('#'+id).classList.add('on'),zamknij=id=>$('#'+id).classList.remove('on');
+$$('[data-zamknij]').forEach(b=>b.onclick=()=>b.closest('.dlg').classList.remove('on'));
+$$('.dlg').forEach(d=>d.addEventListener('click',e=>{if(e.target===d)d.classList.remove('on')}));
+
+/* ── profil planu (pkt 5: przed pisaniem, zmienialny później) ── */
+let profEd=null;const pTyg=kolo($('#pTyg'),1,26,()=>pDoInfo());const pDni=kwadraty($('#pDni'),[1,2,3,4,5,6,7],v=>v,null);
+function pDoInfo(){const od=$('#pOd').value;if(!od){$('#pDo').textContent='';return}const d=zIso(od);d.setDate(d.getDate()+pTyg.get()*7-1);$('#pDo').textContent='Plan do '+pl(iso(d))+' ('+pTyg.get()+' tyg.)'}
+$('#pOd').oninput=pDoInfo;
+function profil(p,klId){profEd=p||null;const pr=p?p.prof:{};const K=klientki().sort((a,b)=>lc(a.imie,b.imie));
+  $('#dProfT').textContent=p?'Profil planu':'Nowy plan – profil';
+  $('#pKl').innerHTML='<option value="">— bez powiązania z obecnością —</option>'+K.map(k=>'<option value="'+k.id+'">'+esc(k.imie)+'</option>').join('');
+  const kid=p?p.kl||'':klId||'';$('#pKl').value=kid;
+  $('#pOsoba').value=p?p.osoba:(kid?(K.find(k=>k.id===kid)||{}).imie||'':'');
+  $('#pCel').value=pr.cel||'';$('#pOgr').value=pr.ogr||'';$('#pNot').value=pr.not||'';$('#pOd').value=pr.od||iso(new Date());
+  pDni.ust(pr.dni||null);$('#pUsun').style.display=p?'':'none';otworz('dProf');const tw=()=>{pTyg.ust(pr.tyg||8);pDoInfo()};tw();requestAnimationFrame(tw)}
+$('#pKl').onchange=()=>{const k=klientki().find(x=>x.id===$('#pKl').value);if(k&&!$('#pOsoba').value.trim())$('#pOsoba').value=k.imie};
+$('#pOk').onclick=()=>{const os=$('#pOsoba').value.trim();if(!os){toast('Wpisz imię albo nazwę planu');$('#pOsoba').focus();return}
+  const prof={cel:$('#pCel').value.trim(),ogr:$('#pOgr').value.trim(),not:$('#pNot').value.trim(),od:$('#pOd').value,tyg:pTyg.get(),dni:pDni.get()};
+  if(profEd){Object.assign(profEd,{osoba:os,kl:$('#pKl').value||null,prof})}
+  else{const p={id:uid(),osoba:os,kl:$('#pKl').value||null,utw:new Date().toISOString(),prof,rozg:{tryb:'wspolna',txt:''},dni:[nowyDzien(1)]};P.plany.push(p);profEd=p}
+  if(zapisz()){zamknij('dProf');otworzPlan(profEd.id);toast('✓ Profil zapisany')}};
+$('#pUsun').onclick=()=>{if(!profEd||!confirm('Usunąć plan „'+profEd.osoba+'”? Tego nie da się cofnąć (chyba że z kopii).'))return;P.plany=P.plany.filter(p=>p!==profEd);zapisz();zamknij('dProf');plan=null;history.replaceState(null,'','#plany');pokaz('plany');toast('Plan usunięty')};
+const nowyWiersz=()=>({id:uid(),cw:null,txt:'',ss:false,s:null,p:null,jed:'',ps:false,rpe:null,prz:'',kg:'',uw:''});
+const nowyDzien=n=>({id:uid(),n:'Dzień '+n,pod:'',rozg:'',w:[nowyWiersz(),nowyWiersz(),nowyWiersz()]});
+
+/* ── edytor planu (pkt 2, 3, 6, 9, 10) ── */
+let hl=null;   // podświetlony limiter ze statystyk
+function lpy(d){const o=[];let g=0;d.w.forEach((r,i)=>{if(!(r.ss&&i>0))g++;o.push(g)});const ile={};o.forEach(g=>ile[g]=(ile[g]||0)+1);const lit={};
+  return o.map(g=>{lit[g]=(lit[g]||0);const l=ile[g]>1?'abcdefgh'[lit[g]++]:'';return g+l})}
+function parTxt(r){const t=[];if(r.s)t.push(zakr(r.s)+'×'+(r.p?zakr(r.p,r.jed==='s'?'″':''):'?')+(r.ps?' ps':''));else if(r.p)t.push(zakr(r.p,r.jed==='s'?'″':'')+(r.ps?' ps':''));
+  if(r.rpe)t.push('RPE '+zakr(r.rpe));if(r.prz)t.push('przerwa '+r.prz);if(r.kg)t.push(r.kg);return t.join(' · ')}
+function tagCw(r){const c=r.cw&&cwId(r.cw);if(c&&pelne(c))return '<div class="tg">'+esc(c.limiter)+' · '+esc(c.region)+' · '+esc(c.pozycja)+'</div>';
+  if(c)return '<div class="tg warn">⚠ w bazie, ale bez limitera/regionu – nie liczy się do statystyk</div>';
+  return r.txt.trim()?'<div class="tg warn">poza bazą – kliknij ＋, żeby dodać</div>':''}
+function wierszHTML(d,r,i,lp){const c=r.cw&&cwId(r.cw),pis=P.tryb==='pis',hlw=hl&&c&&(c.limiter===hl||(c.pom||[]).includes(hl));
+  return '<div class="w'+(r.ss&&i>0?' ss':'')+(hlw?' hl':'')+'" data-d="'+d.id+'" data-r="'+r.id+'"><div class="lp">'+lp+'</div><div class="m">'+
+    (pis?'<div class="cwr"><input class="in" data-f="txt" list="dlCw" value="'+esc(c?c.n:r.txt)+'" placeholder="Ćwiczenie" autocomplete="off"><button class="plus'+(c?' ok':'')+'" data-a="plus" aria-label="'+(c?'Edytuj ćwiczenie w bazie':'Dodaj do bazy')+'">'+(c?'✓':'+')+'</button></div>'
+      :'<button class="cwb'+(c||r.txt?'':' pusty')+'" data-a="wyb">'+esc(c?c.n:(r.txt||'Wybierz ćwiczenie ▾'))+'</button>')+
+    tagCw(r)+(r.uw?'<div class="tg"><i>'+esc(r.uw)+'</i></div>':'')+'</div><div class="pc"><button class="par'+(parTxt(r)?'':' pusty')+'" data-a="par">'+esc(parTxt(r)||'serie · powt. · RPE · przerwa')+'</button></div>'+
+    '<div class="wa">'+(i>0?'<button class="ib'+(r.ss?' on':'')+'" data-a="ss" title="Superseria z poprzednim" aria-label="Superseria z poprzednim">⛓</button>':'')+'<button class="ib" data-a="gora" aria-label="W górę">↑</button><button class="ib" data-a="dol" aria-label="W dół">↓</button><button class="ib" data-a="usun" aria-label="Usuń wiersz">✕</button></div></div>'}
+function rysujPlan(){
+  if(!plan){pokaz('plany');return}const p=plan,pr=p.prof,wsp=p.rozg.tryb==='wspolna';
+  const naz=[...P.cw].sort((a,b)=>lc(a.n,b.n));
+  let h='<datalist id="dlCw">'+naz.map(c=>'<option value="'+esc(c.n)+'">').join('')+'</datalist>';
+  h+='<div class="win"><div class="bar"><h2>'+esc(p.osoba)+'</h2><button class="ib" data-a="prof">✎ Profil</button></div><div class="body" style="font-size:14px">'+
+    (pr.cel?'<div><b>Cel:</b> <span style="white-space:pre-line">'+esc(pr.cel)+'</span></div>':'<div class="sub" style="margin:0">Brak celu – uzupełnij profil.</div>')+
+    (pr.ogr?'<div style="margin-top:4px"><b>Ograniczenia:</b> '+esc(pr.ogr)+'</div>':'')+
+    '<div class="sub" style="margin:6px 0 0">'+(pr.dni?zakr(pr.dni)+' treningi w tygodniu':'dni/tydz. nieustalone')+(pr.od?' · od '+pl(pr.od)+' · '+pr.tyg+' tyg.':'')+'</div></div></div>';
+  h+='<div class="win"><div class="body"><div class="seg" style="margin-bottom:10px"><button data-a="tryb" data-v="pis" class="'+(P.tryb==='pis'?'on':'')+'">✍ Pisanie</button><button data-a="tryb" data-v="wyb" class="'+(P.tryb==='wyb'?'on':'')+'">☰ Wybór z bazy</button></div>'+
+    '<div class="akc" style="margin-top:0"><button class="btn yel sm" data-a="stat">📊 Statystyki</button><button class="btn sm" data-a="druk">🖨 Eksport PDF</button></div>'+
+    '<div class="lab" style="margin-top:12px">Rozgrzewka</div><div class="seg"><button data-a="rtryb" data-v="wspolna" class="'+(wsp?'on':'')+'">Wspólna dla wszystkich dni</button><button data-a="rtryb" data-v="osobna" class="'+(wsp?'':'on')+'">Osobna w każdym dniu</button></div>'+
+    (wsp?'<textarea class="rozg" data-f="rozgW" style="margin-top:8px" placeholder="Rozgrzewka – jedna linia = jedno ćwiczenie">'+esc(p.rozg.txt)+'</textarea>':'')+
+    (hl?'<div class="info" style="margin:10px 0 0"><span>Podświetlone: ćwiczenia na <b>'+esc(hl)+'</b></span><button class="ib" data-a="hlx">✕</button></div>':'')+'</div></div>';
+  p.dni.forEach((d,di)=>{const L=lpy(d);
+    h+='<div class="win dzien" data-d="'+d.id+'"><div class="bar"><input data-f="dn" value="'+esc(d.n)+'" aria-label="Nazwa dnia"><button class="ib" data-a="dgora" aria-label="Dzień w górę">↑</button><button class="ib" data-a="ddol" aria-label="Dzień w dół">↓</button><button class="ib" data-a="dusun" aria-label="Usuń dzień">✕</button></div><div class="body">'+
+      '<input class="in" data-f="dpod" value="'+esc(d.pod)+'" placeholder="Podpis, np. pośladek plecy klatka" style="font-style:italic;font-size:14px;margin-bottom:8px">'+
+      (wsp?'':'<textarea class="rozg" data-f="drozg" placeholder="Rozgrzewka tego dnia" style="margin-bottom:8px">'+esc(d.rozg)+'</textarea>')+
+      d.w.map((r,i)=>wierszHTML(d,r,i,L[i])).join('')+
+      '<div class="akc"><button class="btn sm" data-a="dodajw">＋ Ćwiczenie</button></div></div></div>'});
+  h+='<button class="btn lav wide" data-a="dodajd">＋ Dzień</button>';
+  $('#plan').innerHTML=h;
+}
+const dz=id=>plan.dni.find(d=>d.id===id);
+$('#plan').addEventListener('input',e=>{const t=e.target,f=t.dataset.f;if(!f||!plan)return;const dE=t.closest('[data-d]'),d=dE&&dz(dE.dataset.d);
+  if(f==='rozgW')plan.rozg.txt=t.value;else if(f==='dn')d.n=t.value;else if(f==='dpod')d.pod=t.value;else if(f==='drozg')d.rozg=t.value;
+  else if(f==='txt'){const r=d.w.find(x=>x.id===t.closest('.w').dataset.r),c=cwNaz(t.value);r.txt=t.value;r.cw=c?c.id:null;
+    const b=t.parentNode.querySelector('.plus');b.classList.toggle('ok',!!c);b.textContent=c?'✓':'+'}
+  zapisz()});
+$('#plan').addEventListener('change',e=>{if(e.target.dataset.f==='txt'){rysujPlan()}});
+$('#plan').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b||!plan)return;const a=b.dataset.a,dE=b.closest('[data-d]'),d=dE&&dz(dE.dataset.d),wE=b.closest('.w'),r=wE&&d.w.find(x=>x.id===wE.dataset.r),ri=r?d.w.indexOf(r):-1,di=d?plan.dni.indexOf(d):-1;
+  const mv=(L,i,k)=>{const j=i+k;if(j<0||j>=L.length)return;[L[i],L[j]]=[L[j],L[i]]};
+  if(a==='prof')profil(plan);
+  else if(a==='tryb'){P.tryb=b.dataset.v}
+  else if(a==='stat'){statystyki();return}
+  else if(a==='druk'){drukuj(plan);return}
+  else if(a==='hlx')hl=null;
+  else if(a==='rtryb'){const v=b.dataset.v;if(v===plan.rozg.tryb)return;
+    if(v==='wspolna'){const z=plan.dni.filter(x=>x.rozg.trim());if(!plan.rozg.txt.trim()&&z.length)plan.rozg.txt=z[0].rozg;if(z.length>1)toast('Wspólna = rozgrzewka z „'+z[0].n+'”. Pozostałe są ukryte, nie usunięte.')}
+    else plan.dni.forEach(x=>{if(!x.rozg.trim())x.rozg=plan.rozg.txt});plan.rozg.tryb=v}
+  else if(a==='dodajd')plan.dni.push(nowyDzien(plan.dni.length+1));
+  else if(a==='dgora')mv(plan.dni,di,-1);else if(a==='ddol')mv(plan.dni,di,1);
+  else if(a==='dusun'){if(!confirm('Usunąć dzień „'+d.n+'” z '+d.w.filter(x=>x.cw||x.txt).length+' ćwiczeniami?'))return;plan.dni.splice(di,1)}
+  else if(a==='dodajw')d.w.push(nowyWiersz());
+  else if(a==='gora'){mv(d.w,ri,-1);if(d.w[0])d.w[0].ss=false}else if(a==='dol'){mv(d.w,ri,1);if(d.w[0])d.w[0].ss=false}
+  else if(a==='usun'){if((r.cw||r.txt)&&!confirm('Usunąć wiersz „'+(r.cw?cwId(r.cw).n:r.txt)+'”?'))return;d.w.splice(ri,1);if(d.w[0])d.w[0].ss=false}
+  else if(a==='ss')r.ss=!r.ss;
+  else if(a==='plus'){const inp=wE.querySelector('[data-f="txt"]');r.txt=inp.value;const c=r.cw&&cwId(r.cw);formCw(c||null,c?null:r.txt,id=>{r.cw=id;r.txt=cwId(id).n;zapisz();rysujPlan()});return}
+  else if(a==='wyb'){wybierz(id=>{r.cw=id;r.txt=cwId(id).n;zapisz();rysujPlan()});return}
+  else if(a==='par'){parametry(r);return}
+  zapisz();rysujPlan()});
+
+/* ── parametry wiersza (pkt 6: bez klawiatury) ── */
+let parR=null,aJed='',aPs=false,aPrz='';
+const aSer=kwadraty($('#aSer'),[1,2,3,4,5,6,7,8],v=>v,null);
+const aRpe=kwadraty($('#aRpe'),[5,5.5,6,6.5,7,7.5,8,8.5,9,9.5,10],v=>lb(v),null);
+const PRZ=['30″','45″','1′','1,5′','2′','2,5′','3′','4′'];
+const aPOd=kolo($('#aPOd'),1,60,v=>{if(aPDo&&aPDo.get()<v)aPDo.ust(v,true)}),aPDo=kolo($('#aPDo'),1,60,v=>{if(v<aPOd.get())aPDo.ust(aPOd.get(),true)});
+function rysPrz(){$('#aPrz').innerHTML=PRZ.map(v=>'<button type="button" data-v="'+v+'" class="'+(aPrz===v?'on':'')+'">'+v+'</button>').join('')}
+$('#aPrz').onclick=e=>{const b=e.target.closest('button');if(!b)return;aPrz=aPrz===b.dataset.v?'':b.dataset.v;$('#aPrzI').value='';rysPrz()};
+$('#aPrzI').oninput=()=>{aPrz=$('#aPrzI').value.trim();rysPrz()};
+$('#aJed').onclick=e=>{const b=e.target.closest('button');if(!b)return;aJed=b.dataset.v;$$('#aJed button').forEach(x=>x.classList.toggle('on',x===b))};
+$('#aPs').onclick=()=>{aPs=!aPs;$('#aPs').classList.toggle('on',aPs);$('#aPs').style.background=aPs?'var(--pink)':''};
+function parametry(r){parR=r;aSer.ust(r.s);aRpe.ust(r.rpe);aJed=r.jed||'';aPs=!!r.ps;aPrz=r.prz||'';$('#aPrzI').value=PRZ.includes(aPrz)?'':aPrz;rysPrz();
+  $$('#aJed button').forEach(x=>x.classList.toggle('on',x.dataset.v===aJed));$('#aPs').style.background=aPs?'var(--pink)':'';$('#aKg').value=r.kg||'';$('#aUw').value=r.uw||'';
+  const c=r.cw&&cwId(r.cw);$('#dParT').textContent=c?c.n:(r.txt||'Serie i powtórzenia');otworz('dPar');const pw=()=>{aPOd.ust(r.p?r.p[0]:8);aPDo.ust(r.p?r.p[1]:10)};pw();requestAnimationFrame(pw)}
+$('#aOk').onclick=()=>{Object.assign(parR,{s:aSer.get(),p:[aPOd.get(),aPDo.get()],jed:aJed,ps:aPs,rpe:aRpe.get(),prz:aPrz,kg:$('#aKg').value.trim(),uw:$('#aUw').value.trim()});zapisz();zamknij('dPar');rysujPlan()};
+
+/* ── formularz ćwiczenia (pkt 1, 2: obowiązkowe dane) ── */
+let cwEd=null,cwNazwa0='',cwCb=null,cf={};
+function formCw(c,nazwa,cb){cwEd=c;cwCb=cb||null;cf=c?{partia:c.partia,limiter:c.limiter,region:c.region,pozycja:c.pozycja,pom:[...(c.pom||[])]}:{partia:'',limiter:'',region:'',pozycja:'',pom:[]};
+  $('#dCwT').textContent=c?'Ćwiczenie w bazie':'Nowe ćwiczenie';$('#cNaz').value=c?c.n:(nazwa||'');$('#cUw').value=c?c.uw||'':'';$('#cUsun').style.display=c?'':'none';
+  rysCw();otworz('dCw');if(!c&&!nazwa)setTimeout(()=>$('#cNaz').focus(),250)}
+function rysCw(){const S=P.slownik,part=S.partie.find(x=>x[0]===cf.partia);
+  $('#cPartia').innerHTML=S.partie.map(([n])=>'<button type="button" class="chip'+(cf.partia===n?' on':'')+'" data-v="'+esc(n)+'">'+esc(n)+'</button>').join('');
+  $('#cLim').innerHTML=part?part[1].map(m=>'<button type="button" class="chip'+(cf.limiter===m?' on':'')+'" data-v="'+esc(m)+'">'+esc(m)+'</button>').join(''):'<span class="hint">najpierw partia</span>';
+  $('#cReg').innerHTML=S.regiony.map(v=>'<button type="button" class="'+(cf.region===v?'on':'')+'" data-v="'+esc(v)+'">'+esc(v)+'</button>').join('');
+  $('#cPoz').innerHTML=S.pozycje.map(v=>'<button type="button" class="'+(cf.pozycja===v?'on':'')+'" data-v="'+esc(v)+'">'+esc(v)+'</button>').join('');
+  $('#cPom').innerHTML=S.partie.map(([n,L])=>'<div class="tg" style="margin-top:6px">'+esc(n)+'</div><div class="chips">'+L.filter(m=>m!==cf.limiter).map(m=>'<button type="button" class="chip'+(cf.pom.includes(m)?' on':'')+'" data-v="'+esc(m)+'">'+esc(m)+'</button>').join('')+'</div>').join('');
+  const n=$('#cNaz').value.trim(),podob=n.length>=3?P.cw.filter(c=>c!==cwEd&&(norm(c.n).includes(norm(n))||norm(n).includes(norm(c.n)))).map(c=>c.n):[];
+  $('#cPod').textContent=podob.length?'Podobne w bazie: '+podob.slice(0,3).join(', '):'';
+  const ok=n&&cf.partia&&cf.limiter&&cf.region&&cf.pozycja,brak=[!n&&'nazwa',!cf.partia&&'partia',!cf.limiter&&'limiter',!cf.region&&'region',!cf.pozycja&&'pozycja'].filter(Boolean);
+  $('#cOk').disabled=!ok;$('#cOk').textContent=ok?'✓ Zatwierdź':'Brakuje: '+brak.join(', ')}
+$('#cNaz').oninput=rysCw;
+$('#cPartia').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(cf.partia!==b.dataset.v){cf.partia=b.dataset.v;cf.limiter=''}rysCw()};
+$('#cLim').onclick=e=>{const b=e.target.closest('button');if(!b)return;cf.limiter=b.dataset.v;cf.pom=cf.pom.filter(m=>m!==cf.limiter);rysCw()};
+$('#cReg').onclick=e=>{const b=e.target.closest('button');if(b){cf.region=b.dataset.v;rysCw()}};
+$('#cPoz').onclick=e=>{const b=e.target.closest('button');if(b){cf.pozycja=b.dataset.v;rysCw()}};
+$('#cPom').onclick=e=>{const b=e.target.closest('button');if(!b)return;const v=b.dataset.v;cf.pom=cf.pom.includes(v)?cf.pom.filter(m=>m!==v):cf.pom.concat(v);rysCw()};
+$('#cOk').onclick=()=>{const n=$('#cNaz').value.trim().replace(/\s+/g,' ');const inny=P.cw.find(c=>c!==cwEd&&norm(c.n)===norm(n));if(inny){toast('„'+inny.n+'” już jest w bazie');return}
+  const dane=Object.assign({n,uw:$('#cUw').value.trim()},cf);let id;
+  if(cwEd){Object.assign(cwEd,dane);id=cwEd.id}else{id=uid();P.cw.push(Object.assign({id},dane))}
+  if(zapisz()){zamknij('dCw');toast('✓ '+n+' w bazie');if(cwCb)cwCb(id);else rysuj()}};
+$('#cUsun').onclick=()=>{const c=cwEd,uz=P.plany.reduce((a,p)=>a+p.dni.reduce((b,d)=>b+d.w.filter(r=>r.cw===c.id).length,0),0);
+  if(!confirm('Usunąć „'+c.n+'” z bazy?'+(uz?'\n\nJest użyte w '+uz+' wierszach planów – zostanie tam jako zwykły tekst (poza bazą).':'')))return;
+  P.plany.forEach(p=>p.dni.forEach(d=>d.w.forEach(r=>{if(r.cw===c.id){r.cw=null;r.txt=c.n}})));P.cw=P.cw.filter(x=>x!==c);zapisz();zamknij('dCw');rysuj();toast('Usunięte z bazy')};
+
+/* ── lista A–Z (baza i wybór) ── */
+function listaCw(q,partia,btn){const L=P.cw.filter(c=>(!q||norm(c.n).includes(norm(q)))&&(!partia||c.partia===partia)).sort((a,b)=>lc(a.n,b.n));
+  if(!L.length)return '<p class="sub">'+(P.cw.length?'Nic nie pasuje.':'Baza jest pusta – dodaj pierwsze ćwiczenie przyciskiem ＋.')+'</p>';let lit='';
+  return L.map(c=>{const l=c.n[0].toUpperCase(),h=l!==lit?'<div class="litera">'+esc(l)+'</div>':'';lit=l;
+    return h+'<button data-'+btn+'="'+c.id+'"><b>'+(pelne(c)?'':'⚠ ')+esc(c.n)+'</b><span>'+(pelne(c)?esc(c.partia+' · '+c.limiter+' · '+c.region+' · '+c.pozycja)+(c.pom&&c.pom.length?' · pomocnicze: '+esc(c.pom.join(', ')):''):'do uzupełnienia: partia, limiter, region, pozycja')+'</span></button>'}).join('')}
+const chipsPartii=(el,akt)=>{el.innerHTML='<button class="chip'+(akt?'':' on')+'" data-p="">Wszystkie</button>'+P.slownik.partie.map(([n])=>'<button class="chip'+(akt===n?' on':'')+'" data-p="'+esc(n)+'">'+esc(n)+'</button>').join('')};
+let bP='';
+function rysujBaze(){$('#bazaIle').textContent=P.cw.length;chipsPartii($('#bPartie'),bP);$('#bLista').innerHTML=listaCw($('#bSzukaj').value,bP,'ed')}
+$('#bSzukaj').oninput=rysujBaze;$('#bPartie').onclick=e=>{const b=e.target.closest('[data-p]');if(b){bP=b.dataset.p;rysujBaze()}};
+$('#bLista').onclick=e=>{const b=e.target.closest('[data-ed]');if(b)formCw(cwId(b.dataset.ed))};
+let wCb=null,wP='';
+function wybierz(cb){wCb=cb;$('#wSzukaj').value='';wP='';rysWyb();otworz('dWyb')}
+function rysWyb(){chipsPartii($('#wPartie'),wP);$('#wLista').innerHTML=listaCw($('#wSzukaj').value,wP,'wb')}
+$('#wSzukaj').oninput=rysWyb;$('#wPartie').onclick=e=>{const b=e.target.closest('[data-p]');if(b){wP=b.dataset.p;rysWyb()}};
+$('#wLista').onclick=e=>{const b=e.target.closest('[data-wb]');if(b){zamknij('dWyb');wCb(b.dataset.wb)}};
+$('#wNowe').onclick=()=>{const q=$('#wSzukaj').value.trim();zamknij('dWyb');formCw(null,q,wCb)};
+$('#fab').onclick=()=>widok==='baza'?formCw(null,''):profil(null);
+
+/* ── statystyki (pkt 4): limiter = 1 seria, pomocnicze = ½; zakres serii = min–max ── */
+function liczSt(p,dId){const M={},o={poza:0,niepel:0,bezSer:0};
+  p.dni.filter(d=>!dId||d.id===dId).forEach(d=>d.w.forEach(r=>{const c=r.cw&&cwId(r.cw);if(!c){if(r.txt.trim())o.poza++;return}if(!pelne(c)){o.niepel++;return}if(!r.s){o.bezSer++;return}
+    const dod=(m,k)=>{M[m]=M[m]||[0,0];M[m][0]+=r.s[0]*k;M[m][1]+=r.s[1]*k};dod(c.limiter,1);(c.pom||[]).filter(m=>m!==c.limiter).forEach(m=>dod(m,.5))}));
+  return {M,o}}
+let stD='';
+function statystyki(){stD='';rysSt();otworz('dSt')}
+function rysSt(){const p=plan,{M,o}=liczSt(p,stD),max=Math.max(1,...Object.values(M).map(v=>v[1]));
+  $('#stDni').innerHTML='<button class="chip'+(stD?'':' on')+'" data-sd="">Cały plan</button>'+p.dni.map(d=>'<button class="chip'+(stD===d.id?' on':'')+'" data-sd="'+d.id+'">'+esc(d.n)+'</button>').join('');
+  const S=P.slownik.partie,znane=new Set(S.flatMap(x=>x[1])),inne=Object.keys(M).filter(m=>!znane.has(m));
+  let h='<p class="sub" style="margin-top:0">Serie robocze: limiter = 1, partia pomocnicza = ½. '+(stD?'Jeden dzień.':'Suma wszystkich dni planu ('+p.dni.length+').')+' Kliknij mięsień → podświetlę ćwiczenia w planie.</p>';
+  const ostr=[o.poza&&o.poza+' poza bazą',o.niepel&&o.niepel+' w bazie bez limitera',o.bezSer&&o.bezSer+' bez liczby serii'].filter(Boolean);
+  if(ostr.length)h+='<div class="info"><span>⚠ Nie liczone: '+ostr.join(' · ')+' (wierszy)</span></div>';
+  S.concat(inne.length?[['Spoza słownika',inne]]:[]).forEach(([part,L])=>{const z=L.filter(m=>M[m]);if(!z.length)return;const suma=z.reduce((a,m)=>[a[0]+M[m][0],a[1]+M[m][1]],[0,0]);
+    h+='<div class="st-p">'+esc(part)+' <span style="color:var(--mute);font-weight:700">· '+zakr(suma)+'</span></div>'+z.sort((a,b)=>M[b][1]-M[a][1]).map(m=>'<button class="st-r" data-hl="'+esc(m)+'"><span>'+esc(m)+'<div class="b"><i style="width:'+(100*M[m][1]/max)+'%"></i></div></span><span class="v">'+zakr(M[m])+'</span></button>').join('')});
+  if(!Object.keys(M).length)h+='<p class="sub">Jeszcze nic do policzenia – ćwiczenia muszą być w bazie z limiterem i mieć liczbę serii.</p>';
+  const zero=S.map(([part,L])=>[part,L.filter(m=>!M[m])]).filter(x=>x[1].length);
+  h+='<div class="win" style="margin-top:14px;box-shadow:none"><div class="bar pink"><h3>Niezaopiekowane (0 serii)</h3></div><div class="body">'+(zero.length?zero.map(([part,L])=>'<div class="st-0"><b style="color:var(--ink)">'+esc(part)+':</b> '+esc(L.join(', '))+'</div>').join(''):'<span class="st-0">Wszystkie partie ze słownika mają serie.</span>')+'</div></div>';
+  $('#stTresc').innerHTML=h}
+$('#stDni').onclick=e=>{const b=e.target.closest('[data-sd]');if(b){stD=b.dataset.sd;rysSt()}};
+$('#stTresc').onclick=e=>{const b=e.target.closest('[data-hl]');if(!b)return;hl=b.dataset.hl;zamknij('dSt');rysujPlan();const w=$('.w.hl');if(w)w.scrollIntoView({behavior:'smooth',block:'center'});else toast('Brak ćwiczeń na „'+hl+'” w planie')};
+
+/* ── eksport PDF (pkt 7, 8, 9): układ jak AS.pdf + „Jak czytać plan” ── */
+function jakHTML(t){return String(t||'').split('\n').filter(l=>l.trim()).map(l=>l.startsWith('## ')?'<h3>'+esc(l.slice(3))+'</h3>':'<p style="margin:0 0 4px">'+esc(l)+'</p>').join('')}
+function drukuj(p){if(!p)return;const pr=p.prof,wsp=p.rozg.tryb==='wspolna';let doD='';if(pr.od&&pr.tyg){const d=zIso(pr.od);d.setDate(d.getDate()+pr.tyg*7-1);doD=pl(iso(d))}
+  const okres=[pr.od?pl(pr.od)+(doD?' – '+doD:''):'',pr.tyg?pr.tyg+' tyg.':'',pr.dni?zakr(pr.dni)+' treningi w tygodniu':''].filter(Boolean).join(' · ');
+  let h='<div class="str"><h1>'+esc(p.osoba)+'</h1>'+(pr.dni?'<p class="pod">'+zakr(pr.dni)+' treningi w tygodniu</p>':'')+'<h2 style="font-size:16px;margin-top:10px">Informacje o planie</h2>'+
+    '<h3>Cel / priorytet</h3><div class="box">'+esc(pr.cel)+'</div><h3>Ograniczenia / przeciwwskazania</h3><div class="box">'+esc(pr.ogr)+'</div><h3>Okres planu / dni treningowe</h3><div class="box">'+esc(okres)+'</div>'+
+    '<h2>Jak czytać plan</h2>'+jakHTML(P.jak)+(wsp&&p.rozg.txt.trim()?'<h2>Rozgrzewka (wspólna dla wszystkich dni)</h2><div class="box">'+esc(p.rozg.txt)+'</div>':'')+'</div>';
+  p.dni.forEach(d=>{const L=lpy(d),W=d.w.filter(r=>r.cw||r.txt.trim()),Lp=d.w.map((r,i)=>[r,L[i]]).filter(([r])=>r.cw||r.txt.trim());
+    const ile=Math.max(7,Lp.length);
+    h+='<div class="str"><h1>'+esc(d.n)+'</h1>'+(d.pod?'<p class="pod">'+esc(d.pod)+'</p>':'')+(!wsp?'<h3>Warm up</h3><div class="box">'+esc(d.rozg)+'</div>':'')+
+      '<table><tr><th style="width:4%">Lp.</th><th style="width:22%">Ćwiczenie</th><th style="width:9%">Serie × powt.</th><th style="width:5%">RPE</th><th style="width:6%">Przerwa</th><th>Progresja 1</th><th>Progresja 2</th><th>Progresja 3</th><th>Progresja 4</th></tr>'+
+      Array.from({length:ile},(_,i)=>{const x=Lp[i];if(!x)return '<tr><td class="c">'+(i+1)+'</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>';
+        const [r,lp]=x,c=r.cw&&cwId(r.cw),uw=[r.uw,c&&c.uw].filter(Boolean).join('; ');
+        const sp=r.s||r.p?(r.s?zakr(r.s)+'×':'')+(r.p?zakr(r.p,r.jed==='s'?'″':''):'')+(r.ps?' ps':''):'';
+        return '<tr><td class="c">'+lp+'</td><td>'+esc(c?c.n:r.txt)+(uw?'<br><i>('+esc(uw)+')</i>':'')+'</td><td class="c">'+esc(sp)+(r.kg?'<br><i>'+esc(r.kg)+'</i>':'')+'</td><td class="c">'+esc(zakr(r.rpe))+'</td><td class="c">'+esc(r.prz)+'</td><td></td><td></td><td></td><td></td></tr>'}).join('')+
+      '</table><h3>Uwagi / samopoczucie / ból / zmiany</h3><div class="box"></div></div>'});
+  $('#druk').innerHTML=h;const t=document.title;document.title='Plan_'+p.osoba.replace(/[^\wąćęłńóśźżĄĆĘŁŃÓŚŹŻ-]+/g,'_');setTimeout(()=>{window.print();document.title=t},50)}
+
+/* ── ustawienia: słownik, Jak czytać, kopia ── */
+function rysujUst(){$('#sPartie').value=P.slownik.partie.map(([n,L])=>n+': '+L.join(', ')).join('\n');$('#sReg').value=P.slownik.regiony.join(', ');$('#sPoz').value=P.slownik.pozycje.join(', ');$('#sJak').value=P.jak;
+  const o=+(localStorage.getItem(KEY_KOPIA)||0);$('#kopiaInfo').textContent=o?'Ostatnia kopia: '+pl(iso(new Date(o)))+'.':'Nie ma jeszcze żadnej kopii.'}
+const lista=s=>s.split(',').map(x=>x.trim()).filter(Boolean);
+$('#sZap').onclick=()=>{const partie=$('#sPartie').value.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const i=l.indexOf(':');return i<0?null:[l.slice(0,i).trim(),lista(l.slice(i+1))]});
+  if(partie.some(x=>!x||!x[0]||!x[1].length)){toast('Każda linia: „Partia: mięsień, mięsień”');return}
+  const reg=lista($('#sReg').value),poz=lista($('#sPoz').value);if(!reg.length||!poz.length){toast('Regiony i pozycje nie mogą być puste');return}
+  const nowe=new Set(partie.flatMap(x=>x[1])),zgub=[...new Set(P.cw.map(c=>c.limiter).filter(m=>m&&!nowe.has(m)))];
+  if(zgub.length&&!confirm('Te limitery są użyte w bazie, a znikną ze słownika:\n'+zgub.join(', ')+'\n\nĆwiczenia zostaną, w statystykach będą jako „spoza słownika”. Zapisać?'))return;
+  P.slownik={partie,regiony:reg,pozycje:poz};zapisz();toast('✓ Słownik zapisany')};
+$('#jZap').onclick=()=>{P.jak=$('#sJak').value;zapisz();toast('✓ Zapisane – będzie w kolejnych PDF')};
+$('#jDom').onclick=()=>{$('#sJak').value=JAK};
+async function pobierz(blob,nazwa){
+  try{const f=new File([blob],nazwa,{type:blob.type});if(navigator.canShare&&navigator.canShare({files:[f]})&&/iPhone|iPad|Android/i.test(navigator.userAgent)){await navigator.share({files:[f],title:nazwa});return true}}catch(e){if(e&&e.name==='AbortError')return false}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nazwa;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);return true}
+// ten sam format co kopia w Karnetach: dane Karnetów na górze + „planer”
+async function zapiszKopie(){let K={wersja:1,klientki:[],ust:{}};try{K=JSON.parse(localStorage.getItem(KK)||'null')||K}catch(e){}
+  const b=new Blob([JSON.stringify(Object.assign({aplikacja:'Karnety',zapisano:new Date().toISOString()},K,{planer:P}),null,1)],{type:'application/json'});
+  if(await pobierz(b,'Karnety-kopia-'+iso(new Date())+'.json')){try{localStorage.setItem(KEY_KOPIA,String(Date.now()))}catch(e){}toast('💾 Kopia zapisana');rysuj()}}
+$('#kZap').onclick=zapiszKopie;$('#kWcz').onclick=()=>$('#kPlik').click();
+$('#kPlik').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{const x=JSON.parse(await f.text());if(!x||(!x.planer&&!Array.isArray(x.klientki)))throw 0;
+    const pl_=x.planer&&Array.isArray(x.planer.plany)?x.planer:null,kl_=Array.isArray(x.klientki)?x.klientki:null;
+    if(!confirm('Wczytać kopię z '+(x.zapisano?pl(x.zapisano.slice(0,10)):'pliku')+'?\n\n'+(pl_?'Plany: '+pl_.plany.length+', ćwiczenia: '+(pl_.cw||[]).length+'\n':'')+(kl_?'Klientki (obecność): '+kl_.length+'\n':'')+'\nObecne dane zostaną zastąpione.'))return;
+    if(pl_){P=Object.assign({wersja:1,slownik:SLOWNIK,cw:[],plany:[],jak:JAK,tryb:'pis'},pl_);zapisz()}
+    if(kl_){try{const stare=JSON.parse(localStorage.getItem(KK)||'null')||{};localStorage.setItem(KK,JSON.stringify({wersja:1,klientki:kl_,ust:Object.assign({},stare.ust||{},x.ust||{})}))}catch(err){}}
+    plan=null;rysuj();toast('✓ Wczytano kopię')}catch(err){toast('To nie jest plik kopii Karnetów/Planera')}};
+
+/* ── przykład: plan AS (z Karnety/aplikacja/AS.pdf) ── */
+function przyklad(){if(P.plany.some(p=>p.osoba==='AS (przykład)')&&!confirm('Przykład już jest. Dodać drugi raz?'))return;
+  const CW=[['Odwodzenie na maszynie w pochyleniu / hip airplane z oporem','',''],['Wyciskanie na ławce skośnej','',''],['RDL (sztanga)','dolny','rozciągnięta'],['B stance RDL z rotacją','dolny','rozciągnięta'],
+    ['SA bench support row','',''],['Zejście ze skrzyni z rotacją','górny','rozciągnięta'],['KAS glute bridge','dolny','skrócona'],['Kick back okrężny na pośladkowy średni','',''],['Wykop full ROM','górny',''],
+    ['Wznosy bokiem','',''],['Seated DB press','',''],['Face pull (lina)','',''],['Cable high chopper','','']];
+  const id={};CW.forEach(([n,r,p])=>{const c=cwNaz(n);if(c)id[n]=c.id;else{const x={id:uid(),n,partia:'',limiter:'',region:r,pozycja:p,pom:[],uw:''};P.cw.push(x);id[n]=x.id}});
+  const w=(n,s,p,o)=>Object.assign(nowyWiersz(),{cw:id[n],txt:n,s,p},o||{});
+  const KB='wyciąg na wysokości między kolanem a biodrem, lina przed nogą';
+  P.plany.push({id:uid(),osoba:'AS (przykład)',kl:null,utw:new Date().toISOString(),rozg:{tryb:'osobna',txt:''},
+    prof:{cel:'Zwiększenie masy mięśniowej mm pośladków.\nWzmocnienie mm rąk i pleców\nProfilaktyka bólu w stawie kolanowym',ogr:'Zwyrodnienie stawów kolanowych',not:'',od:iso(new Date()),tyg:8,dni:[2,3]},
+    dni:[{id:uid(),n:'FBW A',pod:'pośladek plecy klatka',rozg:'DWD\nSeated jefferson curl 2x 10\nLying DB hand-to-hand\nSeated hip rotation 2x 12-15\nLow windmill 2x 8-10 ps',w:[
+        w('Odwodzenie na maszynie w pochyleniu / hip airplane z oporem',[2,2],[12,15],{rpe:[9,9],prz:'1,5′',uw:'z oporem i ławką'}),w('Wyciskanie na ławce skośnej',[3,3],[8,10],{rpe:[7,8],ss:true}),
+        w('RDL (sztanga)',[3,3],[8,10],{rpe:[7,8],prz:'2′'}),w('SA bench support row',[3,3],[8,10],{rpe:[7,8]}),w('Zejście ze skrzyni z rotacją',[2,2],[8,10],{rpe:[7,8],ps:true}),
+        w('Wznosy bokiem',[2,2],[10,12],{rpe:[8,9]}),w('Kick back okrężny na pośladkowy średni',[2,2],[12,15],{rpe:[8,9],ps:true,ss:true,uw:KB})]},
+      {id:uid(),n:'FBW B',pod:'pośladek plecy naramienny',rozg:'',w:[w('B stance RDL z rotacją',[2,2],[8,10]),w('Seated DB press',[3,3],[8,10]),w('KAS glute bridge',[3,4],[8,10]),w('Face pull (lina)',[3,3],[10,12]),
+        w('Wykop full ROM',[2,2],[12,15],{ss:true,uw:'wyciąg na wysokości biodra; stopa 15° w stronę pracującej nogi'}),w('Cable high chopper',[2,2],[10,12])]},
+      {id:uid(),n:'LOWER',pod:'Jeśli nie ma możliwości na przerwę między treningami FBW 48–72 h',rozg:'',w:[w('KAS glute bridge',[3,4],[8,10],{kg:'60 kg',rpe:[8,8]}),w('Zejście ze skrzyni z rotacją',[2,3],[8,10],{kg:'13 kg',ps:true}),
+        w('RDL (sztanga)',[3,3],[8,10]),w('Kick back okrężny na pośladkowy średni',[2,2],[12,15],{ps:true,uw:KB})]},
+      {id:uid(),n:'UPPER / CORE',pod:'',rozg:'',w:[w('Wyciskanie na ławce skośnej',[3,3],[10,12],{kg:'15 kg',rpe:[8,8]}),w('SA bench support row',[3,3],[8,10],{kg:'25 kg'}),w('Seated DB press',[3,3],[8,18]),
+        w('Face pull (lina)',[3,3],[10,12]),w('Wznosy bokiem',[3,3],[10,12],{ss:true}),w('Cable high chopper',[2,2],[10,12])]}]});
+  zapisz();toast('✓ Dodano plan AS i 13 ćwiczeń – uzupełnij limitery w Bazie');if(widok==='ust')pokaz('plany');else rysuj()}
+$('#przyklad').onclick=przyklad;
+
+/* ── komunikaty, start ── */
+let tT=null;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),2800)}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$$('.dlg.on').forEach(d=>d.classList.remove('on'))});
+// adres: #plany, #baza, #ust, #plan=<id>, #kl=<id klientki> (ikona 📋 z listy obecności)
+function zAdresu(){const h=decodeURIComponent(location.hash.slice(1));
+  if(h.startsWith('kl=')){const id=h.slice(3),L=P.plany.filter(p=>p.kl===id).sort((a,b)=>(b.utw||'').localeCompare(a.utw||''));
+    if(L.length){otworzPlan(L[0].id);return}pokaz('plany');if(klientki().some(k=>k.id===id))profil(null,id);return}
+  if(h.startsWith('plan=')&&planId(h.slice(5))){otworzPlan(h.slice(5));return}
+  pokaz(['baza','ust'].includes(h)?h:'plany')}
+window.addEventListener('hashchange',()=>{if(/^#(kl|baza|ust)/.test(location.hash))zAdresu()});
+zAdresu();
+if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
